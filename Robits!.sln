@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Robits!", "Robits!\Robits!.vcxproj", "{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Debug|Win32.Build.0 = Debug|Win32
+		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Release|Win32.ActiveCfg = Release|Win32
+		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
