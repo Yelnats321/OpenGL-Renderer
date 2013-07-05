@@ -15,6 +15,7 @@
 using std::vector;
 using std::string;
 
+#include "Input.h"
 class Model;
 class Player;
 
@@ -31,11 +32,12 @@ class Graphics{
 
 	GLFWwindow * window;
 	Player * player;
+	Input input;
 public:
 	Graphics();
 	~Graphics();
 	void genShaders();
-	void update(float) const;
+	void update(float);
 	bool isOpen() const;
 	Model * loadModel(string);
 	GLFWwindow * getWindow() const;

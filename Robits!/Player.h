@@ -6,7 +6,6 @@
 class Player{
 	Camera camera;
 public:
-	Player(Graphics &);
 	const glm::mat4 & getCameraMatrix() const;
-	void update(float, float, float);
+	void update(std::array<bool, 6> &, float, float, float);
 };
