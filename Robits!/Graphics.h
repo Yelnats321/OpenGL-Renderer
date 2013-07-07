@@ -26,9 +26,7 @@ class Graphics{
 
 	GLuint fragShader, vertShader, shaderProg;
 
-	GLint currTimeLoc, wireframeLoc;
 	glm::mat4 proj;
-	GLint posAttrib, colAttrib;
 
 	GLFWwindow * window;
 	Player * player;

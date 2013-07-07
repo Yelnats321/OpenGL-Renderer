@@ -8,6 +8,7 @@ class Camera{
 	float horizontalAngle, verticalAngle;
 public:
 	Camera();
-	void update(std::array<bool, 6> &, float, float, float);
+	void update(std::array<bool, 7> &, float, float, float);
 	const glm::mat4 & getMat() const;
+	const glm::vec3 & getPos() const;
 };

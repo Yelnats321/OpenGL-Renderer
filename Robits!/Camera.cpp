@@ -6,7 +6,7 @@ Camera::Camera() :position(0.f, 0.3f, 0.f){
 	verticalAngle = -M_PI/2;
 }
 
-void Camera::update(std::array<bool, 6> & keys, float x, float y, float deltaTime){
+void Camera::update(std::array<bool, 7> & keys, float x, float y, float deltaTime){
 	horizontalAngle += Settings::MouseSpeed * deltaTime * x;
 	verticalAngle   += Settings::MouseSpeed * deltaTime * y;
 
@@ -67,4 +67,8 @@ void Camera::update(std::array<bool, 6> & keys, float x, float y, float deltaTim
 
 const glm::mat4 & Camera::getMat() const{
 	return matrix;
+}
+
+const glm::vec3 & Camera::getPos() const{
+	return position;
 }

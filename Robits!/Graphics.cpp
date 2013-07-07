@@ -10,24 +10,31 @@
 
 // Shader sources
 const char* vertexSource =
-	"#version 150\n"
-	"in vec3 position;"
-	"in vec3 color;"
-
+	"#version 330\n"
+	"layout(location = 0) in vec3 position;"
+	"layout(location = 1) in vec3 normal;"
+	//"layout(location = 2) in vec3 color;"
 	"out vec3 Color;"
 
+	"uniform vec3 lightPos;"
+	"uniform mat4 V;"
+	"uniform mat4 M;"
 	"uniform mat4 MVP;"
-	"uniform float currTime;"
 	"uniform bool wireframe;"
+	"uniform float ambientIntensity;"
 
 	"void main() {"
-	"	vec3 npos = position;"
+	"	vec3 posWorldSpace = (M * vec4(position, 1.0)).xyz;"
+	"	vec3 posCamSpace = (V * M * vec4(position, 1.0)).xyz;"
+	"	vec3 normCamSpace = normalize(V * M * vec4(normal,0.0)).xyz;"
+	"	vec3 dirToLight = normalize((V*vec4(lightPos, 1.0)).xyz - posCamSpace);"
+	"	float cosTheta = clamp(dot(normCamSpace, dirToLight),0,1);"
 	"	if(wireframe){"
 	"		Color = vec3(0.0, 1.0, 1.0);"
 	"	}"
 	"	else"
-	"		Color = color;"
-	"	gl_Position = MVP * vec4(npos, 1.0 );"
+	"		Color = vec3(0.0, 1.0, 1.0)*cosTheta* 4/ (1.0+pow(distance(lightPos, posWorldSpace), 2) ) + vec3(0.8*ambientIntensity, 0.8*ambientIntensity, 0.8*ambientIntensity);"
+	"	gl_Position = MVP * vec4(position, 1.0 );"
 	"}";
 
 const char* fragmentSource =
@@ -42,7 +49,7 @@ const char* fragmentSource =
 Graphics::Graphics(){    glfwInit();
 
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
-	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 2 );
+	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
 	glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
 	glfwWindowHint( GLFW_RESIZABLE, GL_FALSE );
@@ -107,16 +114,10 @@ void Graphics::genShaders(){
 	glLinkProgram( shaderProg );
 	glUseProgram( shaderProg );
 
-	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.00001f, 10.0f );
+	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.00001f, 10000.0f );
 
-	currTimeLoc = glGetUniformLocation(shaderProg,"currTime");
-	wireframeLoc = glGetUniformLocation(shaderProg, "wireframe");
-
-	posAttrib = glGetAttribLocation( shaderProg, "position" );
-	glEnableVertexAttribArray( posAttrib );
-
-	colAttrib = glGetAttribLocation( shaderProg, "color" );
-	glEnableVertexAttribArray( colAttrib );	if(Settings::Wireframe){
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);	GLint ambInt = glGetUniformLocation(shaderProg, "ambientIntensity");	glUniform1f(ambInt, Settings::AmbientIntensity);		GLint wireframeLoc = glGetUniformLocation(shaderProg, "wireframe");	if(Settings::Wireframe){
 		glUniform1i(wireframeLoc, GL_TRUE);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
@@ -130,15 +131,12 @@ void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH
 
 	input.update(deltaTime);
 
-	GLint MVPloc = glGetUniformLocation( shaderProg, "MVP" );
-	glUniform1f(currTimeLoc, glfwGetTime());
-
-	/*camera = glm::lookAt(
-	position,
-	position + glm::vec3(0.0f, -1.0f, -1.0f),
-	glm::vec3(0.f, 1.f, 0.0f)
-	);*/
-
+	GLint MVPloc = glGetUniformLocation(shaderProg, "MVP");
+	GLint viewPos = glGetUniformLocation(shaderProg, "V");
+	GLint modelPos = glGetUniformLocation(shaderProg, "M");
+	GLint lightPos = glGetUniformLocation(shaderProg, "lightPos");
+	glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player->getCameraMatrix()));
+	glUniform3fv(lightPos, 1, glm::value_ptr(player->getPos()));
 	for(auto i : models){
 		glm::mat4 matrix = proj * player->getCameraMatrix() * i->getModelMatrix();
 		/*std::cout << matrix[0][0] << " " << matrix[0][1] << " " << matrix[0][2] << " " <<matrix[0][3] << std::endl;
@@ -147,9 +145,10 @@ void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH
 		std::cout << matrix[3][0] << " " << matrix[3][1] << " " << matrix[3][2] << " " <<matrix[3][3] << std::endl;
 		std::cout << std::endl;*/
 		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, glm::value_ptr(matrix));
+		glUniformMatrix4fv(modelPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
 		glBindBuffer(GL_ARRAY_BUFFER, i->vbo);
-		glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0);
-		glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));		glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, i->ebo);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));		glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, i->ebo);
 		glDrawElements( GL_TRIANGLES,i->triangles * 3, GL_UNSIGNED_INT,0);
 	}
 	glfwPollEvents();

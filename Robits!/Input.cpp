@@ -1,6 +1,8 @@
 #include "Input.h"
 #include "Player.h"
 
+#include <iostream>
+
 void Input::setPlayer(Player * p){
 	player = p;
 }
@@ -17,7 +19,7 @@ void Input::update(float deltaTime){
 	glfwGetCursorPos(window, &xpos, &ypos);
 	glfwSetCursorPos(window, 800.0/2, 600.0/2);
 
-	std::array<bool, 6> keys= {};
+	std::array<bool, 7> keys= {};
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
 		keys[0] = true;
 	}
@@ -39,6 +41,9 @@ void Input::update(float deltaTime){
 	}
 	if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS){
 		keys[5] = true;
+	}
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS){
+		keys[6] = true;
 	}
 
 	player->update(keys, float(800/2 - xpos), float(600/2 - ypos), deltaTime);
