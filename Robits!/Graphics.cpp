@@ -47,7 +47,7 @@ const char* fragmentSource =
 
 
 Graphics::Graphics(){    glfwInit();
-
+	glfwWindowHint(GLFW_SAMPLES, 4); 
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
 	glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
@@ -114,7 +114,7 @@ void Graphics::genShaders(){
 	glLinkProgram( shaderProg );
 	glUseProgram( shaderProg );
 
-	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.00001f, 10000.0f );
+	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.01f, 10000.0f );
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);	GLint ambInt = glGetUniformLocation(shaderProg, "ambientIntensity");	glUniform1f(ambInt, Settings::AmbientIntensity);		GLint wireframeLoc = glGetUniformLocation(shaderProg, "wireframe");	if(Settings::Wireframe){
@@ -149,7 +149,8 @@ void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH
 		glBindBuffer(GL_ARRAY_BUFFER, i->vbo);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0);
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));		glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, i->ebo);
-		glDrawElements( GL_TRIANGLES,i->triangles * 3, GL_UNSIGNED_INT,0);
+		glDrawElements( GL_TRIANGLES,i->triangles/2 * 3, GL_UNSIGNED_INT,0);
+		glDrawElements( GL_TRIANGLES,i->triangles/2 * 3, GL_UNSIGNED_INT,0);
 	}
 	glfwPollEvents();
 	glfwSwapBuffers(window);
@@ -174,6 +175,7 @@ Model * Graphics::loadModel(string name){
 	vector<float> textures;
 	vector<float> normals;
 	vector<GLuint> triangleData;
+	vector<std::pair<std::string, int> > materials;
 
 	for(auto itr : line){
 		//comments
@@ -184,7 +186,7 @@ Model * Graphics::loadModel(string name){
 		std::istringstream ss(itr);
 		ss >> key >> std::ws;
 
-		if(key == "#")
+		if(key.at(0) == '#')
 			continue;
 
 		//vertecies
@@ -210,10 +212,18 @@ Model * Graphics::loadModel(string name){
 			normals.push_back(z);
 		}
 
+		else if(key == "mtllib"){
+		}
+
+		else if(key == "usemtl"){
+			materials.push_back(std::pair<std::string, int>(itr, triangleData.size()/3));
+		}
 		//faces
 		else if(key == "f"){			for(int i = 0; i < 3; i++){				int a,b,c;				a=b=c=0;				ss >> a;				if(ss.get() == '/'){					if(ss.peek()!='/'){						ss >> b;					}					if(ss.get() == '/'){						ss>> c;					}				}				triangleData.push_back(std::abs(a));				triangleData.push_back(std::abs(b));				triangleData.push_back(std::abs(c));				if(i ==2){					ss>>std::ws;					if(!ss.eof()){						triangleData.push_back(std::abs(a));						triangleData.push_back(std::abs(b));						triangleData.push_back(std::abs(c));						a=b=c=0;						ss >> a;						if(ss.get() == '/'){							if(ss.peek()!='/'){								ss >> b;							}							if(ss.get() == '/'){								ss>> c;							}						}							triangleData.push_back(std::abs(a));						triangleData.push_back(std::abs(b));						triangleData.push_back(std::abs(c));						int size = triangleData.size();						a = triangleData[size-12-3];						b = triangleData[size-12-2];						c = triangleData[size-12-1];						triangleData.push_back(a);						triangleData.push_back(b);						triangleData.push_back(c);					}				}
 			}
 		}
+		else
+			std::cout << itr;
 	}
 	int size = triangleData.size()/3;
 	vector<GLuint> elements(size);
@@ -284,7 +294,7 @@ Model * Graphics::loadModel(string name){
 	glGenBuffers(1, &ebo);
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ebo);
 	glBufferData( GL_ELEMENT_ARRAY_BUFFER, elements.size() * sizeof(GLuint), &elements[0], GL_STATIC_DRAW);
-	Model * mod = new Model(vbo, ebo, elements.size());
+	Model * mod = new Model(vbo, ebo, elements.size(), std::move(materials));
 	models.push_back(mod);
 	return mod;
 }
