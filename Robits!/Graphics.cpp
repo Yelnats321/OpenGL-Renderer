@@ -15,34 +15,49 @@ const char* vertexSource =
 	"layout(location = 1) in vec3 normal;"
 	//"layout(location = 2) in vec3 color;"
 	"out vec3 Color;"
-
-	"uniform vec3 lightPos;"
-	"uniform mat4 V;"
-	"uniform mat4 M;"
+	"out vec3 NormalCamSpace;"
+	"out vec3 EyeDir;"
+	"out vec3 PositionWorldSpace;"
+	"out vec3 LightDirCamSpace;"
 	"uniform mat4 MVP;"
+	"uniform mat4 M;"
+	"uniform mat4 V;"
+	"uniform vec3 lightPos;"
 	"uniform bool wireframe;"
-	"uniform float ambientIntensity;"
 
 	"void main() {"
-	"	vec3 posWorldSpace = (M * vec4(position, 1.0)).xyz;"
-	"	vec3 posCamSpace = (V * M * vec4(position, 1.0)).xyz;"
-	"	vec3 normCamSpace = normalize(V * M * vec4(normal,0.0)).xyz;"
-	"	vec3 dirToLight = normalize((V*vec4(lightPos, 1.0)).xyz - posCamSpace);"
-	"	float cosTheta = clamp(dot(normCamSpace, dirToLight),0,1);"
-	"	if(wireframe){"
-	"		Color = vec3(0.0, 1.0, 1.0);"
-	"	}"
-	"	else"
-	"		Color = vec3(0.0, 1.0, 1.0)*cosTheta* 4/ (1.0+pow(distance(lightPos, posWorldSpace), 2) ) + vec3(0.8*ambientIntensity, 0.8*ambientIntensity, 0.8*ambientIntensity);"
+
+	"	NormalCamSpace =(V*M *vec4(normal,0.0)).xyz;"
+	"	PositionWorldSpace = (M * vec4(position,1.0)).xyz;"
+	"	vec3 PositionCamSpace = (V*M*vec4(position, 1.0)).xyz;"
+	"	EyeDir = -PositionCamSpace;"
+	"	LightDirCamSpace = (V*vec4(lightPos, 1.0)).xyz + EyeDir;"
+	"	Color = vec3(0.0, 1.0, 1.0);"
 	"	gl_Position = MVP * vec4(position, 1.0 );"
 	"}";
 
 const char* fragmentSource =
-	"#version 150\n"
+	"#version 330\n"
+
 	"in vec3 Color;"
-	"out vec4 outColor;"
+	"in vec3 NormalCamSpace;"
+	"in vec3 PositionWorldSpace;"	"in vec3 EyeDir;"	"in vec3 LightDirCamSpace;"	"uniform vec3 lightPos;"	"uniform float ambientIntensity;"
+
+	"out vec3 outColor;"
+
 	"void main() {"
-	"	outColor = vec4(Color, 1.0 );"
+	"	vec3 n = normalize(NormalCamSpace);"
+	"	vec3 l = normalize (LightDirCamSpace);"
+	"	float cosTheta = clamp(dot(n, l),0,1);"
+
+	"	vec3 E = normalize(EyeDir);"
+	"	vec3 R = reflect(-l, n);"
+	"	float cosAlpha = clamp(dot(E, R),0,1);"
+	"	cosAlpha = pow(cosAlpha, 5);"
+	"	float attenIntensity = 1.0 + 0.01*distance(lightPos, PositionWorldSpace)*distance(lightPos, PositionWorldSpace);"
+	"	outColor = Color*cosTheta /attenIntensity+"
+	"	Color* vec3(0.3, 0.3, 0.3) * cosAlpha/attenIntensity+"
+	"	vec3(0.8, 0.8, 0.8) * ambientIntensity;"
 	"}";
 
 
@@ -72,8 +87,8 @@ Graphics::Graphics(){    glfwInit();
 	glClearColor( 0.4f, 0.2f, 0.3f, 1.0f );
 
 	// Create Vertex Array Object
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+
+	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.01f, 10000.0f );
 }
 
 Graphics::~Graphics(){
@@ -84,9 +99,9 @@ Graphics::~Graphics(){
 	for(auto i:models){
 		glDeleteBuffers(1, &(i->vbo));
 		glDeleteBuffers(1, &(i->ebo));
+		glDeleteVertexArrays(1, &(i->vao));
 		delete i;
 	}
-	glDeleteVertexArrays(1, &vao);
 	glfwDestroyWindow(window);
     glfwTerminate();
 }
@@ -102,9 +117,10 @@ void Graphics::genShaders(){
 	glShaderSource( fragShader, 1, &fragmentSource, NULL );
 	glCompileShader( fragShader );
 
-	GLint status;
-	glGetShaderiv( fragShader, GL_COMPILE_STATUS, &status ); 
-	std::cout<<status<< " " << GL_TRUE << std::endl;
+	GLint statusF, statusV;
+	glGetShaderiv( fragShader, GL_COMPILE_STATUS, &statusF ); 
+	glGetShaderiv( vertShader, GL_COMPILE_STATUS, &statusV ); 
+	std::cout<<statusV<< " " << statusF << std::endl;
 
 	// Link the vertex and fragment shader into a shader program
 	shaderProg = glCreateProgram();
@@ -113,11 +129,7 @@ void Graphics::genShaders(){
 	glBindFragDataLocation( shaderProg, 0, "outColor" );
 	glLinkProgram( shaderProg );
 	glUseProgram( shaderProg );
-
-	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.01f, 10000.0f );
-
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);	GLint ambInt = glGetUniformLocation(shaderProg, "ambientIntensity");	glUniform1f(ambInt, Settings::AmbientIntensity);		GLint wireframeLoc = glGetUniformLocation(shaderProg, "wireframe");	if(Settings::Wireframe){
+	GLint ambInt = glGetUniformLocation(shaderProg, "ambientIntensity");	glUniform1f(ambInt, Settings::AmbientIntensity);		GLint wireframeLoc = glGetUniformLocation(shaderProg, "wireframe");	if(Settings::Wireframe){
 		glUniform1i(wireframeLoc, GL_TRUE);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
@@ -133,9 +145,9 @@ void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH
 
 	GLint MVPloc = glGetUniformLocation(shaderProg, "MVP");
 	GLint viewPos = glGetUniformLocation(shaderProg, "V");
+	GLint viewPosInv = glGetUniformLocation(shaderProg, "Vinverse");
 	GLint modelPos = glGetUniformLocation(shaderProg, "M");
 	GLint lightPos = glGetUniformLocation(shaderProg, "lightPos");
-	glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player->getCameraMatrix()));
 	glUniform3fv(lightPos, 1, glm::value_ptr(player->getPos()));
 	for(auto i : models){
 		glm::mat4 matrix = proj * player->getCameraMatrix() * i->getModelMatrix();
@@ -144,13 +156,12 @@ void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH
 		std::cout << matrix[2][0] << " " << matrix[2][1] << " " << matrix[2][2] << " " <<matrix[2][3] << std::endl;
 		std::cout << matrix[3][0] << " " << matrix[3][1] << " " << matrix[3][2] << " " <<matrix[3][3] << std::endl;
 		std::cout << std::endl;*/
+		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
+		glUniformMatrix4fv(viewPosInv, 1, GL_FALSE, glm::value_ptr(glm::inverse(i->getModelMatrix())));
 		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, glm::value_ptr(matrix));
 		glUniformMatrix4fv(modelPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
-		glBindBuffer(GL_ARRAY_BUFFER, i->vbo);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));		glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, i->ebo);
-		glDrawElements( GL_TRIANGLES,i->triangles/2 * 3, GL_UNSIGNED_INT,0);
-		glDrawElements( GL_TRIANGLES,i->triangles/2 * 3, GL_UNSIGNED_INT,0);
+		glBindVertexArray(i->vao);
+		glDrawElements( GL_TRIANGLES,i->triangles * 3, GL_UNSIGNED_INT,0);
 	}
 	glfwPollEvents();
 	glfwSwapBuffers(window);
@@ -164,11 +175,15 @@ void Graphics::setPlayer(Player * p){
 Model * Graphics::loadModel(string name){
 	std::ifstream file;
 	file.open(name);
+	if(file.fail()){
+		std::cout << "Error reading file";
+		return nullptr;
+	}
 	vector<string> line;
-	char buf[256];
+	string buf;
 	while(!file.eof()){
-		file.getline(buf, 256);
-		line.push_back(buf);
+		std::getline(file, buf);
+		line.emplace_back(std::move(buf));
 	}
 
 	vector<float> vertices;
@@ -176,7 +191,6 @@ Model * Graphics::loadModel(string name){
 	vector<float> normals;
 	vector<GLuint> triangleData;
 	vector<std::pair<std::string, int> > materials;
-
 	for(auto itr : line){
 		//comments
 		if(itr.length() == 0)
@@ -216,75 +230,74 @@ Model * Graphics::loadModel(string name){
 		}
 
 		else if(key == "usemtl"){
-			materials.push_back(std::pair<std::string, int>(itr, triangleData.size()/3));
+			materials.emplace_back(itr, triangleData.size()/3);
 		}
 		//faces
-		else if(key == "f"){			for(int i = 0; i < 3; i++){				int a,b,c;				a=b=c=0;				ss >> a;				if(ss.get() == '/'){					if(ss.peek()!='/'){						ss >> b;					}					if(ss.get() == '/'){						ss>> c;					}				}				triangleData.push_back(std::abs(a));				triangleData.push_back(std::abs(b));				triangleData.push_back(std::abs(c));				if(i ==2){					ss>>std::ws;					if(!ss.eof()){						triangleData.push_back(std::abs(a));						triangleData.push_back(std::abs(b));						triangleData.push_back(std::abs(c));						a=b=c=0;						ss >> a;						if(ss.get() == '/'){							if(ss.peek()!='/'){								ss >> b;							}							if(ss.get() == '/'){								ss>> c;							}						}							triangleData.push_back(std::abs(a));						triangleData.push_back(std::abs(b));						triangleData.push_back(std::abs(c));						int size = triangleData.size();						a = triangleData[size-12-3];						b = triangleData[size-12-2];						c = triangleData[size-12-1];						triangleData.push_back(a);						triangleData.push_back(b);						triangleData.push_back(c);					}				}
+		else if(key == "f"){			for(int i = 0; i < 3; i++){				int a,b,c;				a=b=c=0;				ss >> a;				if(ss.get() == '/'){					if(ss.peek()!='/'){						ss >> b;					}					if(ss.get() == '/'){						ss>> c;					}				}				triangleData.push_back(a);				triangleData.push_back(b);				triangleData.push_back(c);				if(i ==2){					ss>>std::ws;					if(!ss.eof()){						triangleData.push_back(a);						triangleData.push_back(b);						triangleData.push_back(c);						a=b=c=0;						ss >> a;						if(ss.get() == '/'){							if(ss.peek()!='/'){								ss >> b;							}							if(ss.get() == '/'){								ss>> c;							}						}							triangleData.push_back(a);						triangleData.push_back(b);						triangleData.push_back(c);						int size = triangleData.size();						a = triangleData[size-12-3];						b = triangleData[size-12-2];						c = triangleData[size-12-1];						triangleData.push_back(a);						triangleData.push_back(b);						triangleData.push_back(c);					}				}
 			}
 		}
-		else
-			std::cout << itr;
 	}
 	int size = triangleData.size()/3;
 	vector<GLuint> elements(size);
 	for(int i = 0; i < size; i++)
 		elements[i] = i;
+
+	std::cout << glfwGetTime() << std::endl;
 	//Assume all elements are unique, until you check out if they aren't
 	for(int i =0; i<size; i++){
-		if(elements[i] != i)
-			continue;
-
-		for(int j = i+1; j <size; j++){
-			if(triangleData[i*3] == triangleData[j*3] &&
-				triangleData[i*3+1] == triangleData[j*3+1] &&
-				triangleData[i*3+2] == triangleData[j*3+2]){
-					elements[j] = i;
+		if(elements[i] == i){
+			for(int j = i+1; j <size; j++){
+				if(triangleData[i*3] == triangleData[j*3] &&
+					triangleData[i*3+1] == triangleData[j*3+1] &&
+					triangleData[i*3+2] == triangleData[j*3+2]){
+						elements[j] = i;
+				}
 			}
 		}
 	}
+
 	//these are just the elements, since they kept their position as their value, they have to be compressed
 	vector<GLuint> sortElem(elements);
 	std::sort(sortElem.begin(), sortElem.end());
 	sortElem.resize(std::distance(sortElem.begin(), std::unique(sortElem.begin(), sortElem.end())));
 
+	std::cout << glfwGetTime() << std::endl;
 	int elemSize = sortElem.size();
-	std::vector<float> data;
-	data.clear();
-	data.resize(elemSize *8, 0);
+	std::vector<float> data(elemSize *8, 0);
 	for(int i = 0; i < elemSize; i++){
+		int elemPos = sortElem[i]*3;
+		int dataPos = i*8;
 		//pack all the elements that are unique
-		GLuint triData [3] = {triangleData[sortElem[i]*3], triangleData[sortElem[i]*3+1], triangleData[sortElem[i]*3+2]};
-
-		data[i*8] = vertices[(triData[0]-1)*3];
-		data[i*8+1] = vertices[(triData[0]-1)*3+1];
-		data[i*8+2] = vertices[(triData[0]-1)*3+2];
+		std::copy(vertices.begin() + (triangleData[elemPos]-1)*3, vertices.begin() + (triangleData[elemPos]-1)*3+3, data.begin() +dataPos);
 		//textures, unused right now
-		/*if(triData[1] != 0){
-		data[i*8+3] = textures[(triData[2] -1)*2];
-		data[i*8+4] = textures[(triData[2] -1)*2+1];
+		/*if(triangleData[sortElem[i]*3+1] != 0){
+		data[i*8+3] = textures[(triangleData[elemPos+1] -1)*2];
+		data[i*8+4] = textures[(triangleData[elemPos+1] -1)*2+1];
 		}
 		else*/{
-			data[i*8+3] = 0;
-			data[i*8+4] = 0;
+			data[dataPos+3] = 0;
+			data[dataPos+4] = 0;
 		}
 
-		if(triData[2] != 0){
-			data[i*8+5] = normals[(triData[2] -1)*3];
-			data[i*8+6] = normals[(triData[2] -1)*3+1];
-			data[i*8+7] = normals[(triData[2] -1)*3+2];
+		if(triangleData[sortElem[i]*3+2] != 0){
+			std::copy(normals.begin() + (triangleData[elemPos+2]-1)*3, normals.begin()+(triangleData[elemPos+2]-1)*3+3, data.begin()+dataPos+5);
 		}
 		else{
-			data[i*8+5] = 0.3;
-			data[i*8+6] = 0.3;
-			data[i*8+7] = 0.3;
+			data[dataPos+5] = 0.3;
+			data[dataPos+6] = 0.3;
+			data[dataPos+7] = 0.3;
 		}
 		//point elements to their true location, rather than their previous pos location
 		if(i != sortElem[i]){
 			std::replace(elements.begin(), elements.end(), sortElem[i], (GLuint)i);
 		}
 	}
+	std::cout << glfwGetTime() << std::endl;
 	std::cout << std::endl << elemSize << " " <<elements.size() << std::endl;
-	GLuint vbo = 0, ebo =0;
+	GLuint vao = 0, vbo = 0, ebo =0;
+
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
 
 	glGenBuffers(1, &vbo);
 	glBindBuffer( GL_ARRAY_BUFFER, vbo );
@@ -293,8 +306,13 @@ Model * Graphics::loadModel(string name){
 
 	glGenBuffers(1, &ebo);
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData( GL_ELEMENT_ARRAY_BUFFER, elements.size() * sizeof(GLuint), &elements[0], GL_STATIC_DRAW);
-	Model * mod = new Model(vbo, ebo, elements.size(), std::move(materials));
+	glBufferData( GL_ELEMENT_ARRAY_BUFFER, elements.size() * sizeof(GLuint), &elements[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));
+
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	Model * mod = new Model(vao, vbo, ebo, elements.size(), std::move(materials));
 	models.push_back(mod);
 	return mod;
 }

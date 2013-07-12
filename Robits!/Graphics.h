@@ -20,8 +20,6 @@ class Model;
 class Player;
 
 class Graphics{
-	GLuint vao;
-
 	vector<Model *> models;
 
 	GLuint fragShader, vertShader, shaderProg;

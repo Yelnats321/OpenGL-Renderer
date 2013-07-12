@@ -9,8 +9,8 @@ class Model{
 	std::vector<std::pair<std::string, int> > materials;
 	void change();
 public:
-	Model(GLuint v, GLuint e, int tri,std::vector<std::pair<std::string, int> > && m):vbo(v), ebo(e),triangles(tri), scayle(1,1,1), materials(m){}
-	GLuint vbo, ebo;
+	Model(GLuint a, GLuint b, GLuint e, int tri,std::vector<std::pair<std::string, int> > && m):vao(a), vbo(b), ebo(e),triangles(tri), scayle(1,1,1), materials(m){}
+	GLuint vao, vbo, ebo;
 	const int triangles;
 	const glm::mat4 & getModelMatrix() const;
 	void setScale(glm::vec3 &);

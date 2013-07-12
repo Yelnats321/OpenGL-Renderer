@@ -10,6 +10,9 @@ const glm::mat4 & Player::getCameraMatrix() const{
 
 const glm::vec3 & Player::getPos() const{
 	return lpos;
+} 
+const glm::vec3 & Player::getCamPos() const{
+	return camera.getPos();
 }
 
 void Player::update(std::array<bool, 7> & keys, float x, float y, float deltaTime){
