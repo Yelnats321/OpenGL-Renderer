@@ -26,12 +26,12 @@ const char* vertexSource =
 	"uniform bool wireframe;"
 
 	"void main() {"
-
+	//"	NormalCamSpace = normal;"
 	"	NormalCamSpace =(V*M *vec4(normal,0.0)).xyz;"
 	"	PositionWorldSpace = (M * vec4(position,1.0)).xyz;"
 	"	vec3 PositionCamSpace = (V*M*vec4(position, 1.0)).xyz;"
 	"	EyeDir = -PositionCamSpace;"
-	"	LightDirCamSpace = (V*vec4(lightPos, 1.0)).xyz + EyeDir;"
+	"	LightDirCamSpace = (V*vec4(lightPos, 1.0)).xyz - PositionCamSpace;"
 	"	Color = vec3(0.0, 1.0, 1.0);"
 	"	gl_Position = MVP * vec4(position, 1.0 );"
 	"}";
@@ -54,9 +54,13 @@ const char* fragmentSource =
 	"	vec3 R = reflect(-l, n);"
 	"	float cosAlpha = clamp(dot(E, R),0,1);"
 	"	cosAlpha = pow(cosAlpha, 5);"
-	"	float attenIntensity = 1.0 + 0.01*distance(lightPos, PositionWorldSpace)*distance(lightPos, PositionWorldSpace);"
-	"	outColor = Color*cosTheta /attenIntensity+"
-	"	Color* vec3(0.3, 0.3, 0.3) * cosAlpha/attenIntensity+"
+	"	cosAlpha = (cosTheta != 0.0 ? cosAlpha:0);"
+	"	vec3 lightVec = lightPos-PositionWorldSpace;"
+	"	float attenIntensity = 1.0 +0.01*dot(lightVec, lightVec);"
+
+	//"	outColor = normalize(NormalCamSpace);"
+	"	outColor = vec3(0,0.7,0.7)*cosTheta /attenIntensity+"
+	"	vec3(0, 0.2, 0.2) * cosAlpha/attenIntensity+"
 	"	vec3(0.8, 0.8, 0.8) * ambientIntensity;"
 	"}";
 
@@ -145,7 +149,6 @@ void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH
 
 	GLint MVPloc = glGetUniformLocation(shaderProg, "MVP");
 	GLint viewPos = glGetUniformLocation(shaderProg, "V");
-	GLint viewPosInv = glGetUniformLocation(shaderProg, "Vinverse");
 	GLint modelPos = glGetUniformLocation(shaderProg, "M");
 	GLint lightPos = glGetUniformLocation(shaderProg, "lightPos");
 	glUniform3fv(lightPos, 1, glm::value_ptr(player->getPos()));
@@ -156,8 +159,7 @@ void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH
 		std::cout << matrix[2][0] << " " << matrix[2][1] << " " << matrix[2][2] << " " <<matrix[2][3] << std::endl;
 		std::cout << matrix[3][0] << " " << matrix[3][1] << " " << matrix[3][2] << " " <<matrix[3][3] << std::endl;
 		std::cout << std::endl;*/
-		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
-		glUniformMatrix4fv(viewPosInv, 1, GL_FALSE, glm::value_ptr(glm::inverse(i->getModelMatrix())));
+		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player->getCameraMatrix()));
 		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, glm::value_ptr(matrix));
 		glUniformMatrix4fv(modelPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
 		glBindVertexArray(i->vao);
