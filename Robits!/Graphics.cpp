@@ -8,63 +8,6 @@
 #include "Model.h"
 #include "Player.h"
 
-// Shader sources
-const char* vertexSource =
-	"#version 330\n"
-	"layout(location = 0) in vec3 position;"
-	"layout(location = 1) in vec3 normal;"
-	//"layout(location = 2) in vec3 color;"
-	"out vec3 Color;"
-	"out vec3 NormalCamSpace;"
-	"out vec3 EyeDir;"
-	"out vec3 PositionWorldSpace;"
-	"out vec3 LightDirCamSpace;"
-	"uniform mat4 MVP;"
-	"uniform mat4 M;"
-	"uniform mat4 V;"
-	"uniform vec3 lightPos;"
-	"uniform bool wireframe;"
-
-	"void main() {"
-	//"	NormalCamSpace = normal;"
-	"	NormalCamSpace =(V*M *vec4(normal,0.0)).xyz;"
-	"	PositionWorldSpace = (M * vec4(position,1.0)).xyz;"
-	"	vec3 PositionCamSpace = (V*M*vec4(position, 1.0)).xyz;"
-	"	EyeDir = -PositionCamSpace;"
-	"	LightDirCamSpace = (V*vec4(lightPos, 1.0)).xyz - PositionCamSpace;"
-	"	Color = vec3(0.0, 1.0, 1.0);"
-	"	gl_Position = MVP * vec4(position, 1.0 );"
-	"}";
-
-const char* fragmentSource =
-	"#version 330\n"
-
-	"in vec3 Color;"
-	"in vec3 NormalCamSpace;"
-	"in vec3 PositionWorldSpace;"	"in vec3 EyeDir;"	"in vec3 LightDirCamSpace;"	"uniform vec3 lightPos;"	"uniform float ambientIntensity;"
-
-	"out vec3 outColor;"
-
-	"void main() {"
-	"	vec3 n = normalize(NormalCamSpace);"
-	"	vec3 l = normalize (LightDirCamSpace);"
-	"	float cosTheta = clamp(dot(n, l),0,1);"
-
-	"	vec3 E = normalize(EyeDir);"
-	"	vec3 R = reflect(-l, n);"
-	"	float cosAlpha = clamp(dot(E, R),0,1);"
-	"	cosAlpha = pow(cosAlpha, 5);"
-	"	cosAlpha = (cosTheta != 0.0 ? cosAlpha:0);"
-	"	vec3 lightVec = lightPos-PositionWorldSpace;"
-	"	float attenIntensity = 1.0 +0.01*dot(lightVec, lightVec);"
-
-	//"	outColor = normalize(NormalCamSpace);"
-	"	outColor = vec3(0,0.7,0.7)*cosTheta /attenIntensity+"
-	"	vec3(0, 0.2, 0.2) * cosAlpha/attenIntensity+"
-	"	vec3(0.8, 0.8, 0.8) * ambientIntensity;"
-	"}";
-
-
 Graphics::Graphics(){    glfwInit();
 	glfwWindowHint(GLFW_SAMPLES, 4); 
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
@@ -97,8 +40,6 @@ Graphics::Graphics(){    glfwInit();
 
 Graphics::~Graphics(){
 	glDeleteProgram(shaderProg);
-	glDeleteShader(fragShader);
-	glDeleteShader(vertShader);
 
 	for(auto i:models){
 		glDeleteBuffers(1, &(i->vbo));
@@ -110,15 +51,37 @@ Graphics::~Graphics(){
     glfwTerminate();
 }
 
-void Graphics::genShaders(){
+void Graphics::genShaders(string vert, string frag){
+	std::ifstream file;
+
+	string vertexSource, fragmentSource;
+	file.open(vert);
+	if(file){
+		file.seekg(0, std::ios::end);
+		vertexSource.resize(file.tellg());
+		file.seekg(0, std::ios::beg);
+		file.read(&vertexSource[0], vertexSource.size());
+		file.close();
+	}
+	file.open(frag);
+	if(file){
+		file.seekg(0, std::ios::end);
+		fragmentSource.resize(file.tellg());
+		file.seekg(0, std::ios::beg);
+		file.read(&fragmentSource[0], fragmentSource.size());
+		file.close();
+	}
+
 	// Create and compile the vertex shader
-	vertShader = glCreateShader( GL_VERTEX_SHADER );
-	glShaderSource( vertShader, 1, &vertexSource, NULL );
+	GLuint vertShader = glCreateShader( GL_VERTEX_SHADER );
+	const char *c_str1 = vertexSource.c_str();
+	glShaderSource( vertShader, 1, &c_str1, NULL );
 	glCompileShader( vertShader );
 
 	// Create and compile the fragment shader
-	fragShader = glCreateShader( GL_FRAGMENT_SHADER );
-	glShaderSource( fragShader, 1, &fragmentSource, NULL );
+	GLuint fragShader = glCreateShader( GL_FRAGMENT_SHADER );
+	const char *c_str2 = fragmentSource.c_str();
+	glShaderSource( fragShader, 1, &c_str2, NULL );
 	glCompileShader( fragShader );
 
 	GLint statusF, statusV;
@@ -130,10 +93,19 @@ void Graphics::genShaders(){
 	shaderProg = glCreateProgram();
 	glAttachShader( shaderProg, vertShader );
 	glAttachShader( shaderProg, fragShader );
-	glBindFragDataLocation( shaderProg, 0, "outColor" );
 	glLinkProgram( shaderProg );
+	glDetachShader(shaderProg, vertShader);
+	glDetachShader(shaderProg, fragShader);
+	glDeleteShader(vertShader);
+	glDeleteShader(fragShader);
 	glUseProgram( shaderProg );
-	GLint ambInt = glGetUniformLocation(shaderProg, "ambientIntensity");	glUniform1f(ambInt, Settings::AmbientIntensity);		GLint wireframeLoc = glGetUniformLocation(shaderProg, "wireframe");	if(Settings::Wireframe){
+
+
+	GLint ambInt = glGetUniformLocation(shaderProg, "ambientIntensity");
+	glUniform1f(ambInt, Settings::AmbientIntensity);
+	
+	GLint wireframeLoc = glGetUniformLocation(shaderProg, "wireframe");
+	if(Settings::Wireframe){
 		glUniform1i(wireframeLoc, GL_TRUE);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
@@ -141,6 +113,38 @@ void Graphics::genShaders(){
 		glUniform1i(wireframeLoc, GL_FALSE);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+}
+
+
+void Graphics::genBuffers(){
+	/*GLuint FramebufferName = 0;
+	glGenFramebuffers(1, &FramebufferName);
+	glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+
+	GLuint renderedTexture;
+	glGenTextures(1, &renderedTexture);
+
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+	// Give an empty image to OpenGL ( the last "0" )
+	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, 800, 600, 0,GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+	// Poor filtering. Needed !
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	GLuint depthrenderbuffer;
+	glGenRenderbuffers(1, &depthrenderbuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 600);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0);
+
+	// Set the list of draw buffers.
+	GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0};
+	glDrawBuffers(1, DrawBuffers);*/
 }
 
 void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

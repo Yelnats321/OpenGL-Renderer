@@ -22,7 +22,7 @@ class Player;
 class Graphics{
 	vector<Model *> models;
 
-	GLuint fragShader, vertShader, shaderProg;
+	GLuint shaderProg;
 
 	glm::mat4 proj;
 
@@ -32,7 +32,8 @@ class Graphics{
 public:
 	Graphics();
 	~Graphics();
-	void genShaders();
+	void genShaders(string, string);
+	void genBuffers();
 	void update(float);
 	bool isOpen() const;
 	Model * loadModel(string);
