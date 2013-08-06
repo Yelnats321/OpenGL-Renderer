@@ -7,6 +7,7 @@
 #include "Settings.h"
 #include "Model.h"
 #include "Player.h"
+#include "Material.h"
 
 Graphics::Graphics(){    glfwInit();
 	glfwWindowHint(GLFW_SAMPLES, 4); 
@@ -28,6 +29,8 @@ Graphics::Graphics(){    glfwInit();
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
+	glEnable(GL_FRAMEBUFFER_SRGB);
+
 	if(!Settings::Wireframe)
 		glEnable(GL_CULL_FACE);
 	glFrontFace(GL_CCW);
@@ -36,11 +39,20 @@ Graphics::Graphics(){    glfwInit();
 	// Create Vertex Array Object
 
 	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.01f, 10000.0f );
+
+	setupMainProg("vert.txt", "frag.txt");
+	setupTextureProg("pass.vert","pass.frag");
 }
 
 Graphics::~Graphics(){
-	glDeleteProgram(shaderProg);
+	glDeleteProgram(texProgram);
+	glDeleteBuffers(1, &quadBuffer);
+	glDeleteRenderbuffers(1, &depthRenderbuffer);
+	glDeleteTextures(1, &renderedTexture);
+	glDeleteFramebuffers(1, &framebuffer);
+	glDeleteVertexArrays(1, &texVAO);
 
+	glDeleteProgram(mainProg);
 	for(auto i:models){
 		glDeleteBuffers(1, &(i->vbo));
 		glDeleteBuffers(1, &(i->ebo));
@@ -51,7 +63,7 @@ Graphics::~Graphics(){
     glfwTerminate();
 }
 
-void Graphics::genShaders(string vert, string frag){
+GLuint genShaders(string vert, string frag){
 	std::ifstream file;
 
 	string vertexSource, fragmentSource;
@@ -90,7 +102,7 @@ void Graphics::genShaders(string vert, string frag){
 	std::cout<<statusV<< " " << statusF << std::endl;
 
 	// Link the vertex and fragment shader into a shader program
-	shaderProg = glCreateProgram();
+	GLuint shaderProg = glCreateProgram();
 	glAttachShader( shaderProg, vertShader );
 	glAttachShader( shaderProg, fragShader );
 	glLinkProgram( shaderProg );
@@ -98,63 +110,86 @@ void Graphics::genShaders(string vert, string frag){
 	glDetachShader(shaderProg, fragShader);
 	glDeleteShader(vertShader);
 	glDeleteShader(fragShader);
-	glUseProgram( shaderProg );
 
+	return shaderProg;
 
-	GLint ambInt = glGetUniformLocation(shaderProg, "ambientIntensity");
+}
+
+void Graphics::setupMainProg(string v, string f){
+	mainProg = genShaders(v,f);
+
+	glUseProgram( mainProg );
+
+	GLint ambInt = glGetUniformLocation(mainProg, "ambientIntensity");
 	glUniform1f(ambInt, Settings::AmbientIntensity);
 	
-	GLint wireframeLoc = glGetUniformLocation(shaderProg, "wireframe");
+	GLint wireframeLoc = glGetUniformLocation(mainProg, "wireframe");
 	if(Settings::Wireframe){
 		glUniform1i(wireframeLoc, GL_TRUE);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
+
 	else{
 		glUniform1i(wireframeLoc, GL_FALSE);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 }
 
+void Graphics::setupTextureProg(string v, string f){	texProgram = genShaders(v, f);
+	glUniform1i( glGetUniformLocation( texProgram, "renderedTexture" ), 0 );
 
-void Graphics::genBuffers(){
-	/*GLuint FramebufferName = 0;
-	glGenFramebuffers(1, &FramebufferName);
-	glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+	static const GLfloat quad[] = {
+		-1.0f, -1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		-1.0f,  1.0f, 0.0f,
+		-1.0f,  1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		1.0f,  1.0f, 0.0f,
+	};
 
-	GLuint renderedTexture;
+	glGenBuffers(1, &quadBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, quadBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+
+	framebuffer = 0;
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
 	glGenTextures(1, &renderedTexture);
-
-	// "Bind" the newly created texture : all future texture functions will modify this texture
 	glBindTexture(GL_TEXTURE_2D, renderedTexture);
-
-	// Give an empty image to OpenGL ( the last "0" )
-	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, 800, 600, 0,GL_RGB, GL_UNSIGNED_BYTE, 0);
-
-	// Poor filtering. Needed !
+	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, 800, 600, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderedTexture, 0);
 
-	GLuint depthrenderbuffer;
-	glGenRenderbuffers(1, &depthrenderbuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+	glGenRenderbuffers(1, &depthRenderbuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, depthRenderbuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 600);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderbuffer);
 
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Frame buffer dun goofed";
 
-	// Set the list of draw buffers.
-	GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0};
-	glDrawBuffers(1, DrawBuffers);*/
+	glGenVertexArrays(1, &texVAO);
+	glBindVertexArray(texVAO);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glEnableVertexAttribArray(0);
 }
 
-void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+void Graphics::update(float deltaTime){
 	input.update(deltaTime);
 
-	GLint MVPloc = glGetUniformLocation(shaderProg, "MVP");
-	GLint viewPos = glGetUniformLocation(shaderProg, "V");
-	GLint modelPos = glGetUniformLocation(shaderProg, "M");
-	GLint lightPos = glGetUniformLocation(shaderProg, "lightPos");
+	glViewport(0, 0, 800, 600);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glUseProgram(mainProg);
+
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	GLint MVPloc = glGetUniformLocation(mainProg, "MVP");
+	GLint viewPos = glGetUniformLocation(mainProg, "V");
+	GLint modelPos = glGetUniformLocation(mainProg, "M");
+	GLint lightPos = glGetUniformLocation(mainProg, "lightPos");
 	glUniform3fv(lightPos, 1, glm::value_ptr(player->getPos()));
 	for(auto i : models){
 		glm::mat4 matrix = proj * player->getCameraMatrix() * i->getModelMatrix();
@@ -169,6 +204,21 @@ void Graphics::update(float deltaTime){	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH
 		glBindVertexArray(i->vao);
 		glDrawElements( GL_TRIANGLES,i->triangles * 3, GL_UNSIGNED_INT,0);
 	}
+	//glViewport(0, 0, 400, 300);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindVertexArray(texVAO);
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glUseProgram(texProgram);
+
+	GLint timeLoc = glGetUniformLocation(texProgram, "time");
+	glUniform1f(timeLoc, glfwGetTime());
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+	glDrawArrays(GL_TRIANGLES,0,6);
+
 	glfwPollEvents();
 	glfwSwapBuffers(window);
 }
@@ -177,12 +227,56 @@ void Graphics::setPlayer(Player * p){
 	player = p;
 	input.setPlayer(p);
 }
+//remember to extract curr location 
+void loadMaterials(string name){
+	std::ifstream file;
+	file.open(name);
+	if(file.fail()){
+		std::cout << "Error reading materials file " + name;
+		return;
+	}
+	vector<string> line;
+	string buf;
+	while(!file.eof()){
+		std::getline(file, buf);
+		line.emplace_back(std::move(buf));
+	}
+
+	//Material * currMat;
+
+	for(auto itr:line){
+		string key;
+		std::istringstream ss(itr);
+		ss >> std::ws>> key >> std::ws;
+
+		if(key.length() == 0)
+			continue;
+
+		if(key.at(0) == '#')
+			continue;
+
+		if(key == "newmtl"){
+		}
+	}
+}
+
+template <typename T>
+struct threeData{
+	T x, y, z;
+	threeData(T a, T b, T c):x(a), y(b), z(c){}
+	bool operator==(const threeData &other) const{
+		return(x==other.x && y == other.y && z ==other.z);
+	}
+};
+
+typedef threeData<float> floatData;
+typedef threeData<GLuint> GLuintData;
 
 Model * Graphics::loadModel(string name){
 	std::ifstream file;
 	file.open(name);
 	if(file.fail()){
-		std::cout << "Error reading file";
+		std::cout << "Error reading file "+ name;
 		return nullptr;
 	}
 	vector<string> line;
@@ -192,19 +286,18 @@ Model * Graphics::loadModel(string name){
 		line.emplace_back(std::move(buf));
 	}
 
-	vector<float> vertices;
-	vector<float> textures;
-	vector<float> normals;
-	vector<GLuint> triangleData;
+	vector<floatData> vertices;
+	vector<floatData> textures;
+	vector<floatData> normals;
+	vector<GLuintData> triangleData;
 	vector<std::pair<std::string, int> > materials;
 	for(auto itr : line){
-		//comments
-		if(itr.length() == 0)
-			continue;
-
 		string key;
 		std::istringstream ss(itr);
-		ss >> key >> std::ws;
+		ss >> std::ws>> key >> std::ws;
+
+		if(key.length() == 0)
+			continue;
 
 		if(key.at(0) == '#')
 			continue;
@@ -213,49 +306,50 @@ Model * Graphics::loadModel(string name){
 		if(key == "v"){
 			float x, y, z;
 			ss >> x >> std::ws>> y>>std::ws>> z;
-			vertices.push_back(x);
-			vertices.push_back(y);
-			vertices.push_back(z);
+			vertices.emplace_back(x,y,z);
 		}
 
 		//textures
 		else if(key == "vt"){
-			continue;
+			float x, y, z;
+			ss >> x >> std::ws>> y>>std::ws>> z;
+			textures.emplace_back(x,y,z);
 		}
 
 		//normals
 		else if(key == "vn"){	
 			float x, y, z;
 			ss >> x >> std::ws>> y>>std::ws>> z;
-			normals.push_back(x);
-			normals.push_back(y);
-			normals.push_back(z);
+			normals.emplace_back(x,y,z);
 		}
 
 		else if(key == "mtllib"){
+			string matName;
+			ss >> matName;
+			if(name.find_last_of('/')!= string::npos)
+				matName = name.substr(0, name.find_last_of('/')+1) + matName;
+			loadMaterials(matName);
 		}
 
 		else if(key == "usemtl"){
 			materials.emplace_back(itr, triangleData.size()/3);
 		}
 		//faces
-		else if(key == "f"){			for(int i = 0; i < 3; i++){				int a,b,c;				a=b=c=0;				ss >> a;				if(ss.get() == '/'){					if(ss.peek()!='/'){						ss >> b;					}					if(ss.get() == '/'){						ss>> c;					}				}				triangleData.push_back(a);				triangleData.push_back(b);				triangleData.push_back(c);				if(i ==2){					ss>>std::ws;					if(!ss.eof()){						triangleData.push_back(a);						triangleData.push_back(b);						triangleData.push_back(c);						a=b=c=0;						ss >> a;						if(ss.get() == '/'){							if(ss.peek()!='/'){								ss >> b;							}							if(ss.get() == '/'){								ss>> c;							}						}							triangleData.push_back(a);						triangleData.push_back(b);						triangleData.push_back(c);						int size = triangleData.size();						a = triangleData[size-12-3];						b = triangleData[size-12-2];						c = triangleData[size-12-1];						triangleData.push_back(a);						triangleData.push_back(b);						triangleData.push_back(c);					}				}
+		else if(key == "f"){			for(int i = 0; i < 3; ++i){				GLuint a,b,c;				a=b=c=0;				ss >> a;				if(ss.get() == '/'){					if(ss.peek()!='/'){						ss >> b;					}					if(ss.get() == '/'){						ss>> c;					}				}				triangleData.emplace_back(a,b,c);				if(i ==2){					ss>>std::ws;					if(!ss.eof()){						triangleData.emplace_back(a,b,c);						a=b=c=0;						ss >> a;						if(ss.get() == '/'){							if(ss.peek()!='/'){								ss >> b;							}							if(ss.get() == '/'){								ss>> c;							}						}							triangleData.emplace_back(a,b,c);						triangleData.emplace_back(triangleData[triangleData.size()-5]);					}				}
 			}
 		}
 	}
-	int size = triangleData.size()/3;
+	int size = triangleData.size();
 	vector<GLuint> elements(size);
-	for(int i = 0; i < size; i++)
+	for(int i = 0; i < size; ++i)
 		elements[i] = i;
 
 	std::cout << glfwGetTime() << std::endl;
 	//Assume all elements are unique, until you check out if they aren't
-	for(int i =0; i<size; i++){
+	for(int i =0; i<size; ++i){
 		if(elements[i] == i){
-			for(int j = i+1; j <size; j++){
-				if(triangleData[i*3] == triangleData[j*3] &&
-					triangleData[i*3+1] == triangleData[j*3+1] &&
-					triangleData[i*3+2] == triangleData[j*3+2]){
+			for(int j = i+1; j <size; ++j){
+				if(triangleData[i] == triangleData[j]){
 						elements[j] = i;
 				}
 			}
@@ -270,11 +364,14 @@ Model * Graphics::loadModel(string name){
 	std::cout << glfwGetTime() << std::endl;
 	int elemSize = sortElem.size();
 	std::vector<float> data(elemSize *8, 0);
-	for(int i = 0; i < elemSize; i++){
-		int elemPos = sortElem[i]*3;
+	for(int i = 0; i < elemSize; ++i){
+		int elemPos = sortElem[i];
 		int dataPos = i*8;
-		//pack all the elements that are unique
-		std::copy(vertices.begin() + (triangleData[elemPos]-1)*3, vertices.begin() + (triangleData[elemPos]-1)*3+3, data.begin() +dataPos);
+		//pack all the elements that are unique//&vertices[triangleData[elemPos]-1][0], &vertices[triangleData[elemPos]][0],
+		//std::copy(&vertices[triangleData[elemPos]-1], &vertices[triangleData[elemPos]], &data[dataPos]);
+		data[dataPos] = vertices[triangleData[elemPos].x-1].x;
+		data[dataPos+1] = vertices[triangleData[elemPos].x-1].y;
+		data[dataPos+2] = vertices[triangleData[elemPos].x-1].z;
 		//textures, unused right now
 		/*if(triangleData[sortElem[i]*3+1] != 0){
 		data[i*8+3] = textures[(triangleData[elemPos+1] -1)*2];
@@ -285,8 +382,11 @@ Model * Graphics::loadModel(string name){
 			data[dataPos+4] = 0;
 		}
 
-		if(triangleData[sortElem[i]*3+2] != 0){
-			std::copy(normals.begin() + (triangleData[elemPos+2]-1)*3, normals.begin()+(triangleData[elemPos+2]-1)*3+3, data.begin()+dataPos+5);
+		if(triangleData[sortElem[i]].z != 0){			//std::copy(normals.begin() + (triangleData[elemPos+2]-1)*3, normals.begin()+(triangleData[elemPos+2]-1)*3+3, data.begin()+dataPos+5);
+			//std::copy(&normals[(triangleData[elemPos+2]-1)*3], &normals[(triangleData[elemPos+2]-1)*3+3], &data[dataPos+5]);
+			data[dataPos+5] = normals[triangleData[elemPos].z-1].x;
+			data[dataPos+6] = normals[triangleData[elemPos].z-1].y;
+			data[dataPos+7] = normals[triangleData[elemPos].z-1].z;
 		}
 		else{
 			data[dataPos+5] = 0.3;

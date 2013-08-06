@@ -9,7 +9,7 @@ class Model{
 	std::vector<std::pair<std::string, int> > materials;
 	void change();
 public:
-	Model(GLuint a, GLuint b, GLuint e, int tri,std::vector<std::pair<std::string, int> > && m):vao(a), vbo(b), ebo(e),triangles(tri), scayle(1,1,1), materials(m){}
+	Model(GLuint, GLuint, GLuint, int, std::vector<std::pair<std::string, int> > &&);
 	GLuint vao, vbo, ebo;
 	const int triangles;
 	const glm::mat4 & getModelMatrix() const;

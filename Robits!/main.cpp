@@ -6,14 +6,13 @@
 #include "Player.h"
 
 int main(){
-	Graphics graphics;	graphics.genShaders("vert.txt", "frag.txt");
-
+	Graphics graphics;
 	Player player;
 
 	graphics.setPlayer(&player);
 
-	//Model * dragon = graphics.loadModel("crytek-sponza/sponza.obj");
-	//dragon->setScale(glm::vec3(0.001, 0.001, 0.001));
+	Model * dragon = graphics.loadModel("crytek-sponza/sponza.obj");
+	dragon->setScale(glm::vec3(0.001, 0.001, 0.001));
 
 	/*Model * monkey = graphics.loadModel("monkey.obj");
 	monkey->setRotation(glm::vec3(3.14/2, 0, 0));
@@ -22,7 +21,7 @@ int main(){
 	//Model * floor2 = graphics.loadModel("floor.obj");
 	//floor2->setRotation(glm::vec3(3.14/2, 0,0));
 	//floor2->setPosition(glm::vec3(0,0,-1));
-	Model * floor = graphics.loadModel("floor.obj");
+	/*Model * floor = graphics.loadModel("floor.obj");
 	floor->setRotation(glm::vec3(-3.14/2, 0,0));
 	//floor->setPosition(glm::vec3(0, 0,1));
 	floor->setScale(glm::vec3(100, 100, 100));

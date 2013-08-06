@@ -4,6 +4,12 @@
 //THE ORDER IS TRANSLATE, ROTATE, SCALE
 //TRANSLATE TO ORIGIN BEFORE APPLYING ANYTHING
 
+Model::Model(GLuint a, GLuint b, GLuint e, int tri,std::vector<std::pair<std::string, int> > && m)
+	:vao(a), vbo(b), ebo(e),triangles(tri), scayle(1,1,1), materials(std::move(m)){
+}
+
+
+
 const glm::mat4 & Model::getModelMatrix() const{
 	return matrix;
 }

@@ -22,18 +22,21 @@ class Player;
 class Graphics{
 	vector<Model *> models;
 
-	GLuint shaderProg;
+	GLuint mainProg;
+
+	//Texture shit
+	GLuint quadBuffer, framebuffer, depthRenderbuffer, renderedTexture, texVAO, texProgram;
 
 	glm::mat4 proj;
 
 	GLFWwindow * window;
 	Player * player;
 	Input input;
+	void setupMainProg(string, string);
+	void setupTextureProg(string, string);
 public:
 	Graphics();
 	~Graphics();
-	void genShaders(string, string);
-	void genBuffers();
 	void update(float);
 	bool isOpen() const;
 	Model * loadModel(string);
