@@ -1,0 +1,17 @@
+newmtl testmtl
+	map_Kd testmap.bmp
+	Ka 1.0 1.0 1.0
+	Kd 1.0 1.0 1.0
+	Ks 1.0 1.0 1.0
+
+newmtl testmtl2
+	map_Kd testmap2.bmp
+	Ka 1.0 1.0 1.0
+	Kd 1.0 1.0 1.0
+	Ks 1.0 1.0 1.0
+
+newmtl testmtl3
+	map_Kd testmap.png
+	Ka 1.0 1.0 1.0
+	Kd 1.0 1.0 1.0
+	Ks 1.0 1.0 1.0

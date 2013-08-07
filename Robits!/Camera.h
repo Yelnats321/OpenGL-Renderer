@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Graphics.h"
+#include <array>
 
 class Camera{
 	glm::mat4 matrix;

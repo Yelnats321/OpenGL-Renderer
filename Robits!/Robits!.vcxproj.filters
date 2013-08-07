@@ -39,7 +39,7 @@
     <ClCompile Include="Model.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="Material.cpp">
+    <ClCompile Include="AssetLoader.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
   </ItemGroup>
@@ -63,6 +63,9 @@
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Material.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="AssetLoader.h">
       <Filter>Graphics</Filter>
     </ClInclude>
   </ItemGroup>

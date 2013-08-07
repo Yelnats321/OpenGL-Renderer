@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <string>
-#include <array>
 using std::vector;
 using std::string;
 
@@ -39,7 +38,7 @@ public:
 	~Graphics();
 	void update(float);
 	bool isOpen() const;
-	Model * loadModel(string);
+	Model * addModel(string);
 	GLFWwindow * getWindow() const;
 	void setPlayer(Player *);
 };

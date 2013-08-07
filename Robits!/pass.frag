@@ -14,7 +14,7 @@ float rand(vec2 co){
 
  
 void main(){
-	color = texture(renderedTexture, UV).xyz;
+	color = texture(renderedTexture, UV).rgb;
 	//color = color+(mod(gl_FragCoord.x, 5)-2)*0.05 + (mod(gl_FragCoord.y,5)-2)*0.05;
 	//color = (texture(renderedTexture, UV).xyz) + vec3(0.3)*rand(UV.xy+time);
 }

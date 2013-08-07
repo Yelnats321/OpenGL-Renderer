@@ -1,11 +1,12 @@
 #version 330
 layout(location = 0) in vec3 position;
-layout(location = 1) in vec3 normal;
-out vec3 Color;
+layout(location = 1) in vec2 texture;
+layout(location = 2) in vec3 normal;
 out vec3 NormalCamSpace;
 out vec3 EyeDir;
 out vec3 PositionWorldSpace;
 out vec3 LightDirCamSpace;
+out vec2 UV;
 uniform mat4 MVP;
 uniform mat4 M;
 uniform mat4 V;
@@ -18,7 +19,8 @@ void main() {
 	vec3 PositionCamSpace = (V*M*vec4(position, 1.0)).xyz;
 	EyeDir = -PositionCamSpace;
 	LightDirCamSpace = (V*vec4(lightPos, 1.0)).xyz - PositionCamSpace;
-	Color = vec3(0.0, 0.6, 0.6);
 	gl_Position = MVP * vec4(position, 1.0 );
+
+	UV = texture;
 }
 

@@ -4,7 +4,6 @@
 using std::string;
 
 struct Material{
-	string name;
 	//Specular exponent
 	float Ns;
 	//Optical density, index of refraction
@@ -35,7 +34,7 @@ struct Material{
 	//Ambient map
 	string map_Ka;
 	//Diffuse map
-	string map_Kd;
+	GLuint map_Kd;
 	//Alpha texture map
 	string map_d;
 	//map_bump or bump
