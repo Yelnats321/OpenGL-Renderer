@@ -7,10 +7,14 @@ in vec3 LightDirCamSpace;
 in vec2 UV;
 uniform vec3 lightPos;
 uniform float ambientIntensity;
-uniform sampler2D texSampler;
+uniform sampler2D ambTex;
+uniform sampler2D difTex;
+//uniform sampler2D specTex;
+uniform sampler2D alphaMask;
 uniform vec3 ambientColor;
 uniform vec3 specularColor;
 uniform vec3 diffuseColor;
+uniform float shineFactor;
 
 layout(location = 0)out vec3 outColor;
 
@@ -28,13 +32,16 @@ void main() {
 	float cosAlpha = exp(expo);*/
 
 	float cosAlpha = clamp(dot(n, halfAng),0,1);
-	cosAlpha = pow(cosAlpha, 5);
+	cosAlpha = pow(cosAlpha, shineFactor);
+	cosAlpha = cosTheta==0?0:cosAlpha;
 
 	float lightPower = 3;
 	vec3 lightVec = lightPos-PositionWorldSpace;
 	float attenIntensity = 1/(1.0 +dot(lightVec, lightVec));
-	outColor = texture(texSampler, vec2(UV.x, 1-UV.y)).rgb* diffuseColor * lightPower* cosTheta *attenIntensity+
-		specularColor* lightPower* cosAlpha *attenIntensity+
-		ambientColor* ambientIntensity;
+	vec2 uv = vec2(UV.x, 1-UV.y);
+	if(texture(alphaMask, uv).r != 1)
+		discard;
+	outColor = texture(difTex, uv).rgb* diffuseColor * lightPower* cosTheta *attenIntensity+
+		/*texture(specTex, uv).rgb**/ specularColor* lightPower* cosAlpha *attenIntensity+
+		texture(ambTex, uv).rgb* ambientColor* ambientIntensity;
 }
-

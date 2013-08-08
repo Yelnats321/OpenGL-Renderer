@@ -24,7 +24,9 @@ class Graphics{
 	GLuint mainProg;
 
 	//Texture shit
-	GLuint quadBuffer, framebuffer, depthRenderbuffer, renderedTexture, texVAO, texProgram;
+	GLuint quadBuffer, framebuffer, renderbuffer, renderedTexture, texVAO, texProgram;
+
+	GLuint whiteTex;
 
 	glm::mat4 proj;
 

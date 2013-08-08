@@ -6,11 +6,15 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
+		Release CTP|Win32 = Release CTP|Win32
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Debug|Win32.Build.0 = Debug|Win32
+		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Release CTP|Win32.ActiveCfg = Release CTP|Win32
+		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Release CTP|Win32.Build.0 = Release CTP|Win32
+		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Release CTP|Win32.Deploy.0 = Release CTP|Win32
 		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Release|Win32.ActiveCfg = Release|Win32
 		{D4625F7A-5F6B-417D-B3E8-16D49F1A939B}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection

@@ -46,7 +46,7 @@ Graphics::Graphics(){    glfwInit();
 Graphics::~Graphics(){
 	glDeleteProgram(texProgram);
 	glDeleteBuffers(1, &quadBuffer);
-	glDeleteRenderbuffers(1, &depthRenderbuffer);
+	glDeleteRenderbuffers(1, &renderbuffer);
 	glDeleteTextures(1, &renderedTexture);
 	glDeleteFramebuffers(1, &framebuffer);
 	glDeleteVertexArrays(1, &texVAO);
@@ -65,10 +65,9 @@ Graphics::~Graphics(){
 void Graphics::setupMainProg(string v, string f){
 	mainProg = genShaders(v,f);
 
-	glUseProgram( mainProg );
+	glUseProgram(mainProg);
 
-	GLint ambInt = glGetUniformLocation(mainProg, "ambientIntensity");
-	glUniform1f(ambInt, Settings::AmbientIntensity);
+	glUniform1f(glGetUniformLocation(mainProg, "ambientIntensity"), Settings::AmbientIntensity);
 	
 	GLint wireframeLoc = glGetUniformLocation(mainProg, "wireframe");
 	if(Settings::Wireframe){
@@ -80,6 +79,13 @@ void Graphics::setupMainProg(string v, string f){
 		glUniform1i(wireframeLoc, GL_FALSE);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+	
+	glUniform1i(glGetUniformLocation(mainProg, "ambTex"), 0);
+	glUniform1i(glGetUniformLocation(mainProg, "difTex"), 1);
+	//glUniform1i(glGetUniformLocation(mainProg, "specTex"), 2);
+	glUniform1i(glGetUniformLocation(mainProg, "alphaMask"), 3);
+
+	whiteTex = loadTexture("white.bmp");
 }
 
 void Graphics::setupTextureProg(string v, string f){	texProgram = genShaders(v, f);
@@ -109,10 +115,10 @@ void Graphics::setupTextureProg(string v, string f){	texProgram = genShaders(v,
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderedTexture, 0);
 
-	glGenRenderbuffers(1, &depthRenderbuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, depthRenderbuffer);
+	glGenRenderbuffers(1, &renderbuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 600);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderbuffer);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);
 
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Frame buffer dun goofed";
@@ -140,8 +146,8 @@ void Graphics::update(float deltaTime){
 	GLint ambColor = glGetUniformLocation(mainProg, "ambientColor");
 	GLint difColor = glGetUniformLocation(mainProg, "diffuseColor");
 	GLint specColor = glGetUniformLocation(mainProg, "specularColor");
+	GLint shininess = glGetUniformLocation(mainProg, "shineFactor");
 	glUniform3fv(lightPos, 1, glm::value_ptr(player->getPos()));
-	glUniform1i(glGetUniformLocation(mainProg, "texSampler"), 0);
 	for(auto i : models){
 		glm::mat4 matrix = proj * player->getCameraMatrix() * i->getModelMatrix();
 		/*std::cout << matrix[0][0] << " " << matrix[0][1] << " " << matrix[0][2] << " " <<matrix[0][3] << std::endl;
@@ -159,8 +165,25 @@ void Graphics::update(float deltaTime){
 			glUniform3f(ambColor, currMat->Ka[0], currMat->Ka[1], currMat->Ka[2]);
 			glUniform3f(difColor, currMat->Kd[0], currMat->Kd[1], currMat->Kd[2]);
 			glUniform3f(specColor, currMat->Ks[0], currMat->Ks[1], currMat->Ks[2]);
+			glUniform1f(shininess, currMat->Ns);
+
+			//No ambient texture? use diffuse instead
+			glActiveTexture(GL_TEXTURE0);
+			if(currMat->map_Ka !=0)
+				glBindTexture(GL_TEXTURE_2D, currMat->map_Ka);
+			else
+				glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
+
+			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
 
+			//no mask? use white instead
+			glActiveTexture(GL_TEXTURE3);
+			if(currMat->map_d !=0)
+				glBindTexture(GL_TEXTURE_2D, currMat->map_d);
+			else{
+				glBindTexture(GL_TEXTURE_2D, whiteTex);
+			}
 			if(mats+1 == i->getMatCalls().end()){
 				glDrawElements(GL_TRIANGLES, i->triangles -mats->second*3, GL_UNSIGNED_INT,(void*)(sizeof(unsigned int) *mats->second*3));
 			}

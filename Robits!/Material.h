@@ -4,6 +4,32 @@
 using std::string;
 
 struct Material{
+	Material():
+		Ns(1.0),
+		Ni(1.0),
+		Tr(0.0),
+		illum(2),
+		map_Ka(0),
+		map_Kd(0),
+		map_d(0),
+		map_bump(0)
+	{
+		Tf[0] = 1;
+		Tf[1] = 1;
+		Tf[2] = 1;
+
+		Ka[0] = 1;
+		Ka[1] = 1;
+		Ka[2] = 1;
+
+		Kd[0] = 1;
+		Kd[1] = 1;
+		Kd[2] = 1;
+
+		Ks[0] = 1;
+		Ks[1] = 1;
+		Ks[2] = 1;
+	}
 	//Specular exponent
 	float Ns;
 	//Optical density, index of refraction
@@ -32,11 +58,11 @@ struct Material{
 	//Specular color mutiply
 	float Ks[3];
 	//Ambient map
-	string map_Ka;
+	GLuint map_Ka;
 	//Diffuse map
 	GLuint map_Kd;
 	//Alpha texture map
-	string map_d;
+	GLuint map_d;
 	//map_bump or bump
-	string map_bump;
+	GLuint map_bump;
 };

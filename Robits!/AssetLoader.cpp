@@ -1,4 +1,4 @@
-#include "AssetLoader.h"
+﻿#include "AssetLoader.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -10,6 +10,8 @@ extern "C"{
 
 #include "Model.h"
 #include "Material.h"
+
+std::map<string, GLuint> textures;
 
 GLuint genShaders(string vert, string frag){
 	std::ifstream file;
@@ -64,35 +66,44 @@ GLuint genShaders(string vert, string frag){
 }
 
 GLuint loadTexture(string name){
+	if(textures.find(name) != textures.end()){
+		std::cout<<" -Returned loaded texture " +name + " at location "<<textures[name]<<std::endl;
+		return textures[name];
+	}
 	GLuint texture;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	int width, height;
-	unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, 0, SOIL_LOAD_AUTO);
+	int width, height, channels;
+	unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	SOIL_free_image_data(image);
-	std::cout << "		Loaded texture " + name + " to the location " << texture<<std::endl;
+	if(image == nullptr){
+		std::cout <<" ***Error loading texture " + name + " due to " + SOIL_last_result()<<std::endl;
+		return 0;
+	}
+	std::cout << " -Loaded texture " + name + " to the location " << texture<<std::endl;
+	textures[name] = texture;
 	return texture;
 }
 
 void locationAppend(string origin, string * file){
-	std::replace(origin.begin(), origin.end(), '\\', '/');
-	if(origin.find_last_of('/')!= string::npos){
-		*file = origin.substr(0, origin.find_last_of('/') +1) + *file;
+	std::replace(origin.begin(), origin.end(), '/', '\\');
+	if(origin.find_last_of('\\')!= string::npos){
+		*file = origin.substr(0, origin.find_last_of('\\') +1) + *file;
 	}
 }
 
 //remember to extract curr location 
 std::map<string, Material *> loadMaterialLibrary(string name){
-	std::cout << "	Loading the material library " + name<<std::endl;
+	std::cout << "-Loading the material library " + name<<std::endl;
 	std::map<string, Material *> mats;
 
 	std::ifstream file;
 	file.open(name);
 	if(file.fail()){
-		std::cout << "	Error reading materials file " + name;
+		std::cout << "***Error reading materials file";
 		return mats;
 	}
 	vector<string> line;
@@ -119,6 +130,7 @@ std::map<string, Material *> loadMaterialLibrary(string name){
 			currMat = new Material;
 			string matName;
 			ss >> matName;
+			std::cout << " New material: "+matName<<std::endl;
 			mats.emplace(std::move(matName), currMat);
 		}
 
@@ -185,7 +197,8 @@ std::map<string, Material *> loadMaterialLibrary(string name){
 		else if(key == "map_Ka"){
 			string mapKa;
 			ss >> mapKa;
-			currMat->map_Ka = mapKa;
+			locationAppend(name, &mapKa);
+			currMat->map_Ka = loadTexture(mapKa);
 		}
 
 		else if(key == "map_Kd"){
@@ -198,13 +211,16 @@ std::map<string, Material *> loadMaterialLibrary(string name){
 		else if(key == "map_d"){
 			string mapd;
 			ss >> mapd;
-			currMat->map_d = mapd;
+			locationAppend(name, &mapd);
+			currMat->map_d = loadTexture(mapd);
 		}
 
 		else if(key == "bump" || key == "map_bump"){
 			string mapbump;
 			ss >> mapbump;
-			currMat->map_bump = mapbump;
+			locationAppend(name, &mapbump);
+			if(currMat->map_bump == 0)
+				currMat->map_bump = loadTexture(mapbump);
 		}
 
 		else{
