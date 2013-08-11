@@ -33,9 +33,6 @@
     <ClCompile Include="Graphics.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="Camera.cpp">
-      <Filter>Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="Model.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
@@ -54,9 +51,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Graphics.h">
-      <Filter>Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Camera.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Model.h">

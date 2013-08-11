@@ -11,20 +11,20 @@ int main(){
 
 	graphics.setPlayer(&player);
 
-	Model * dragon = graphics.addModel("crytek-sponza\\sponza.obj");
-	dragon->setScale(glm::vec3(0.001, 0.001, 0.001));
+	//Model * dragon = graphics.addModel("sponza-x\\sponza.obj");
+	//dragon->setScale(glm::vec3(0.001, 0.001, 0.001));
 
 	/*Model * monkey = graphics.addModel("monkey.obj");
 	monkey->setRotation(glm::vec3(3.14/2, 0, 0));
 	//monkey->setPosition(glm::vec3(2, 0, 0));
 	monkey->setScale(glm::vec3(0.8, 0.8, 0.8));*/
-	//Model * floor2 = graphics.addModel("floor.obj");
+	Model * floor2 = graphics.addModel("assets/room.obj");
 	//floor2->setRotation(glm::vec3(3.14/2, 0,0));
-	//floor2->setPosition(glm::vec3(0,0,-1));
-	//Model * floor = graphics.addModel("floor.obj");
-	//floor->setRotation(glm::vec3(-3.14/2, 0,0));
-	//floor->setPosition(glm::vec3(0, 0,1));
-	//floor->setScale(glm::vec3(100, 100, 100));
+	//floor2->setPosition(glm::vec3(0,0,1));
+	/*Model * floor = graphics.addModel("floor.obj");
+	floor->setRotation(glm::vec3(-3.14/2, 0,0));
+	floor->setPosition(glm::vec3(0, 0,3));
+	floor->setScale(glm::vec3(10, 10, 10));
 	//this one is CW
 	/*Model * teapot = graphics.addModel("teapot.obj");
 	teapot->setPosition(glm::vec3(0, 0, 2));
@@ -36,8 +36,12 @@ int main(){
 		double currentTime = glfwGetTime();
 		float deltaTime = float(currentTime - lastTime);
 		lastTime = currentTime;
-		if(deltaTime > 1/60.f)
+		if(deltaTime > 1/60.f){
+			if(deltaTime >1/30.f){
+				std::cout << "Slowing down"<<std::endl;
+			}
 			deltaTime = 1/60.f;
+		}
 		graphics.update(deltaTime);
 	}
 }

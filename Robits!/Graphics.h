@@ -24,9 +24,10 @@ class Graphics{
 	GLuint mainProg;
 
 	//Texture shit
-	GLuint quadBuffer, framebuffer, renderbuffer, renderedTexture, texVAO, texProgram;
+	GLuint quadBuffer, quadProgram, quadVAO;
+	GLuint framebuffer, renderbuffer, shadowProgram, shadowTexture;
 
-	GLuint whiteTex;
+	GLuint whiteTex, blueTex;
 
 	glm::mat4 proj;
 
@@ -34,7 +35,8 @@ class Graphics{
 	Player * player;
 	Input input;
 	void setupMainProg(string, string);
-	void setupTextureProg(string, string);
+	void setupShadowProg(string, string);
+	void setupQuadProg(string, string);
 public:
 	Graphics();
 	~Graphics();

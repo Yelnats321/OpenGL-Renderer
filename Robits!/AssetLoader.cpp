@@ -5,7 +5,7 @@
 #include <algorithm>
 
 extern "C"{
-	#include <SOIL.h>
+#include <SOIL.h>
 }
 
 #include "Model.h"
@@ -65,7 +65,7 @@ GLuint genShaders(string vert, string frag){
 
 }
 
-GLuint loadTexture(string name){
+GLuint loadTexture(string name, bool sRGB){
 	if(textures.find(name) != textures.end()){
 		std::cout<<" -Returned loaded texture " +name + " at location "<<textures[name]<<std::endl;
 		return textures[name];
@@ -75,9 +75,15 @@ GLuint loadTexture(string name){
 	glBindTexture(GL_TEXTURE_2D, texture);
 	int width, height, channels;
 	unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	if(sRGB)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	else
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glEnable(GL_TEXTURE_2D);
+	//glGenerateMipmap(GL_TEXTURE_2D);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR/*_MIPMAP_LINEAR*/ );
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4.0f);
 	SOIL_free_image_data(image);
 	if(image == nullptr){
 		std::cout <<" ***Error loading texture " + name + " due to " + SOIL_last_result()<<std::endl;
@@ -134,114 +140,92 @@ std::map<string, Material *> loadMaterialLibrary(string name){
 			mats.emplace(std::move(matName), currMat);
 		}
 
-		else if(key == "Ns"){
-			float Ns = 0;
-			ss >> Ns;
-			currMat->Ns = Ns;
+		else if(key == "Ns" || key == "Ni" || key == "illum" || key == "Tr" || key == "d"){
+			float value = 0;
+			ss >> value;
+
+			if(key== "Ns")
+				currMat->Ns = value;
+
+
+			else if(key == "Ni")
+				currMat->Ni = value;
+
+
+			else if(key == "illum")
+				currMat->illum = value;
+
+
+			else 
+				currMat->Tr = value;
 		}
 
-		else if(key == "Ni"){
-			float Ni = 0;
-			ss >> Ni;
-			currMat->Ni = Ni;
-		}
-
-		else if(key == "Tr" || key == "d"){
-			float Tr = 0;
-			ss >> Tr;
-			currMat->Tr = Tr;
-		}
-
-		else if(key == "Tf"){
+		else if(key == "Tf" || key == "Ka" || key == "Kd" || key == "Ks"){
 			float a, b, c;
 			a = b=c=0;
-			ss >> a >> std::ws>>b>>std::ws>>c;
-			currMat->Tf[0] = a;
-			currMat->Tf[1] = b;
-			currMat->Tf[2] = c;
+			ss >> a >> std::ws>>b>>std::ws>>c;		
+
+			if(key == "Tf"){
+				currMat->Tf[0] = a;
+				currMat->Tf[1] = b;
+				currMat->Tf[2] = c;
+			}
+
+			else if(key == "Ka"){
+				currMat->Ka[0] = a;
+				currMat->Ka[1] = b;
+				currMat->Ka[2] = c;
+			}
+
+			else if(key == "Kd"){
+				currMat->Kd[0] = a;
+				currMat->Kd[1] = b;
+				currMat->Kd[2] = c;
+			}
+
+			else{
+				currMat->Ks[0] = a;
+				currMat->Ks[1] = b;
+				currMat->Ks[2] = c;
+			}
 		}
 
-		else if(key == "illum"){
-			float il = 0;
-			ss >> il;
-			currMat->illum = il;
-		}
+		else if(key == "map_Ka" || key == "map_Kd" || key == "map_d" || key == "bump" || key == "map_bump"){
+			string mapName;
+			ss>>mapName;
+			locationAppend(name, &mapName);
+			bool sRGB =!( key=="bump" || key == "map_bump");
+			GLuint texture = loadTexture(mapName, sRGB);
 
-		else if(key == "Ka"){
-			float a, b, c;
-			a = b=c=0;
-			ss >> a >> std::ws>>b>>std::ws>>c;
-			currMat->Ka[0] = a;
-			currMat->Ka[1] = b;
-			currMat->Ka[2] = c;
-		}
+			if(key == "map_Ka")
+				currMat->map_Ka = texture;
 
-		else if(key == "Kd"){
-			float a, b, c;
-			a = b=c=0;
-			ss >> a >> std::ws>>b>>std::ws>>c;
-			currMat->Kd[0] = a;
-			currMat->Kd[1] = b;
-			currMat->Kd[2] = c;
-		}
+			else if(key == "map_Kd")
+				currMat->map_Kd = texture;
 
-		else if(key == "Ks"){
-			float a, b, c;
-			a = b=c=0;
-			ss >> a >> std::ws>>b>>std::ws>>c;
-			currMat->Ks[0] = a;
-			currMat->Ks[1] = b;
-			currMat->Ks[2] = c;
-		}
+			else if(key == "map_d")
+				currMat->map_d = texture;
 
-		else if(key == "map_Ka"){
-			string mapKa;
-			ss >> mapKa;
-			locationAppend(name, &mapKa);
-			currMat->map_Ka = loadTexture(mapKa);
-		}
-
-		else if(key == "map_Kd"){
-			string mapKd;
-			ss >> mapKd;
-			locationAppend(name, &mapKd);
-			currMat->map_Kd = loadTexture(mapKd);
-		}
-
-		else if(key == "map_d"){
-			string mapd;
-			ss >> mapd;
-			locationAppend(name, &mapd);
-			currMat->map_d = loadTexture(mapd);
-		}
-
-		else if(key == "bump" || key == "map_bump"){
-			string mapbump;
-			ss >> mapbump;
-			locationAppend(name, &mapbump);
-			if(currMat->map_bump == 0)
-				currMat->map_bump = loadTexture(mapbump);
+			//if it isn't any of those maps, it must be bump map
+			else
+				currMat->map_bump = texture;
 		}
 
 		else{
-			//std::cout << itr;
+			std::cout << itr<<std::endl;
 		}
 	}
 
 	return mats;
 }
 
-template <typename T>
-struct threeData{
-	T x, y, z;
-	threeData(T a, T b, T c):x(a), y(b), z(c){}
-	bool operator==(const threeData &other) const{
-		return(x==other.x && y == other.y && z ==other.z);
+struct GLuintData{
+	GLuint x, y, z;
+	GLuintData(GLuint a, GLuint b, GLuint c):x(a), y(b), z(c){}
+	inline bool operator==(const GLuintData &rhs) const{
+		return(x==rhs.x && y == rhs.y && z ==rhs.z);
 	}
 };
-
-typedef threeData<float> floatData;
-typedef threeData<GLuint> GLuintData;
 
 Model * loadModel(string name){
 	std::cout<<"Loading file " + name<<std::endl;
@@ -258,12 +242,14 @@ Model * loadModel(string name){
 		line.emplace_back(std::move(buf));
 	}
 
-	vector<floatData> vertices;
-	vector<floatData> textures;
-	vector<floatData> normals;
+	vector<glm::vec3> vertices;
+	vector<glm::vec2> textures;
+	vector<glm::vec3> normals;
+
 	vector<GLuintData> pointData;
 	vector<std::pair<std::string, int> > materials;
 	std::map<string, Material *>matLib;
+
 	for(auto itr : line){
 		string key;
 		std::istringstream ss(itr);
@@ -275,25 +261,15 @@ Model * loadModel(string name){
 		if(key.at(0) == '#')
 			continue;
 
-		//vertecies
-		if(key == "v"){
+		if(key == "v" || key == "vt" || key == "vn"){
 			float x, y, z;
 			ss >> x >> std::ws>> y>>std::ws>> z;
-			vertices.emplace_back(x,y,z);
-		}
-
-		//textures
-		else if(key == "vt"){
-			float x, y;
-			ss >> x >> std::ws>> y;
-			textures.emplace_back(x,y,1.f);
-		}
-
-		//normals
-		else if(key == "vn"){	
-			float x, y, z;
-			ss >> x >> std::ws>> y>>std::ws>> z;
-			normals.emplace_back(x,y,z);
+			if(key=="v")
+				vertices.emplace_back(x,y,z);
+			else if(key=="vt")
+				textures.emplace_back(x,y);
+			else
+				normals.emplace_back(x,y,z);
 		}
 
 		else if(key == "mtllib"){
@@ -349,7 +325,55 @@ Model * loadModel(string name){
 			}
 		}
 	}
+	bool useTextures = false, useNormals =false;
+
+	if(pointData[0].y != 0)
+		useTextures = true;
+	if(pointData[0].z !=0)
+		useNormals = true;
+	//REMEMBER SPONGEBOB
+	//RAVIOLI RAVIOLI
+	//DON'T FORGET THE SUBTRACTIOLI
+	//OBJ COUNTS FROM 1 NOT 0
+
 	int size = pointData.size();
+
+	vector<glm::vec3> tangents;
+	vector<glm::vec3> bitangents;
+	if(useNormals && useTextures){
+		for(int i = 0; i <size; i+=3){
+			//std::cout<<"triangle "<<i/3<<std::endl;
+			glm::vec3 & v0 = vertices[pointData[i].x-1];
+			glm::vec3 & v1 = vertices[pointData[i+1].x-1];
+			glm::vec3 & v2 = vertices[pointData[i+2].x-1];
+
+			glm::vec2 & uv0 = textures[pointData[i].y-1];
+			glm::vec2 & uv1 = textures[pointData[i+1].y-1];
+			glm::vec2 & uv2 = textures[pointData[i+2].y-1];
+
+			glm::vec3 deltaPos1 = v1-v0;
+			glm::vec3 deltaPos2 = v2-v0;
+
+			glm::vec2 deltaUV1 = uv1-uv0;
+			glm::vec2 deltaUV2 = uv2-uv0;
+
+			float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+			glm::vec3 tangent = (deltaPos1 * deltaUV2.y   - deltaPos2 * deltaUV1.y)*r;
+			glm::vec3 bitangent = (deltaPos2 * deltaUV1.x   - deltaPos1 * deltaUV2.x)*r;			for(int j =0; j < 3; j++){				tangents.emplace_back(tangent);				bitangents.emplace_back(bitangent);			}		}
+	}
+	for(int i = 0; i < pointData.size(); i++){
+		glm::vec3 & n = normals[pointData[i].z-1];
+		glm::vec3 & t = tangents[i];
+		glm::vec3 & b = bitangents[i];
+
+		// Gram-Schmidt orthogonalize
+		t = glm::normalize(t - n * glm::dot(n, t));
+
+		// Calculate handedness
+		if (glm::dot(glm::cross(n, t), b) < 0.0f){
+			t = t * -1.0f;
+		}
+	}
 	vector<GLuint> elements(size);
 	for(int i = 0; i < size; ++i)
 		elements[i] = i;
@@ -357,9 +381,14 @@ Model * loadModel(string name){
 	std::cout << glfwGetTime() << std::endl;
 	//Assume all elements are unique, until you check out if they aren't
 	for(int i =0; i<size; ++i){
+			/*std::cout << tangents[i].x << " " <<tangents[i].y<<" "<<tangents[i].z<<std::endl;
+			std::cout << bitangents[i].x << " " <<bitangents[i].y<<" "<<bitangents[i].z<<std::endl;
+			std::cout<< normals[pointData[i].x-1].z<< " "<< normals[pointData[i].z-1].y<< " "<< normals[pointData[i].z-1].z<< std::endl<<std::endl;*/
 		if(elements[i] == i){
 			for(int j = i+1; j <size; ++j){
 				if(pointData[i] == pointData[j]){
+					//tangents[i] += tangents[j];
+					//bitangents[i] += bitangents[j];
 					elements[j] = i;
 				}
 			}
@@ -373,40 +402,47 @@ Model * loadModel(string name){
 
 	std::cout << glfwGetTime() << std::endl;
 	int elemSize = sortElem.size();
-	std::vector<float> data(elemSize *8, 0);
+
+	int blockSize = 3+(useTextures?2:0) + (useNormals?3:0);
+	if(blockSize == 8)
+		blockSize = 14;
+
+	std::vector<float> data(elemSize * blockSize, 0);
 	for(int i = 0; i < elemSize; ++i){
-		GLuint elemPos = sortElem[i];
-		int dataPos = i*8;
+		GLuint sElemPos = sortElem[i];
+		int dataPos = i*blockSize;
 		//pack all the elements that are unique
 		//&vertices[pointData[elemPos]-1][0], &vertices[pointData[elemPos]][0],
 		//std::copy(&vertices[pointData[elemPos]-1], &vertices[pointData[elemPos]], &data[dataPos]);
-		data[dataPos] = vertices[pointData[elemPos].x-1].x;
-		data[dataPos+1] = vertices[pointData[elemPos].x-1].y;
-		data[dataPos+2] = vertices[pointData[elemPos].x-1].z;
-		if(pointData[elemPos].y != 0){
-			data[dataPos+3] = textures[pointData[elemPos].y -1].x;
-			data[dataPos+4] = textures[pointData[elemPos].y -1].y;
-		}
-		else{
-			data[dataPos+3] = 0;
-			data[dataPos+4] = 0;
+		data[dataPos] = vertices[pointData[sElemPos].x-1].x;
+		data[dataPos+1] = vertices[pointData[sElemPos].x-1].y;
+		data[dataPos+2] = vertices[pointData[sElemPos].x-1].z;
+		if(useTextures){
+			data[dataPos+3] = textures[pointData[sElemPos].y -1].x;
+			data[dataPos+4] = textures[pointData[sElemPos].y -1].y;
+			dataPos+=2;
 		}
 
-		if(pointData[elemPos].z != 0){
+		if(useNormals){
 			//std::copy(normals.begin() + (pointData[elemPos+2]-1)*3, normals.begin()+(pointData[elemPos+2]-1)*3+3, data.begin()+dataPos+5);
 			//std::copy(&normals[(pointData[elemPos+2]-1)*3], &normals[(pointData[elemPos+2]-1)*3+3], &data[dataPos+5]);
-			data[dataPos+5] = normals[pointData[elemPos].z-1].x;
-			data[dataPos+6] = normals[pointData[elemPos].z-1].y;
-			data[dataPos+7] = normals[pointData[elemPos].z-1].z;
+			data[dataPos+3] = normals[pointData[sElemPos].z-1].x;
+			data[dataPos+4] = normals[pointData[sElemPos].z-1].y;
+			data[dataPos+5] = normals[pointData[sElemPos].z-1].z;
 		}
-		else{
-			data[dataPos+5] = 1;
-			data[dataPos+6] = 0;
-			data[dataPos+7] = 0;
+
+		if(useTextures && useNormals){
+			data[dataPos+6] = tangents[sElemPos].x;
+			data[dataPos+7] = tangents[sElemPos].y;
+			data[dataPos+8] = tangents[sElemPos].z;
+			data[dataPos+ 9] = bitangents[sElemPos].x;
+			data[dataPos+10] = bitangents[sElemPos].y;
+			data[dataPos+11] = bitangents[sElemPos].z;
 		}
+
 		//point elements to their true location, rather than their previous pos location
-		if(i != elemPos){
-			std::replace(elements.begin(), elements.end(), elemPos, (GLuint)i);
+		if(i != sElemPos){
+			std::replace(elements.begin(), elements.end(), sElemPos, (GLuint)i);
 		}
 	}
 	std::cout << glfwGetTime() << std::endl;
@@ -418,20 +454,29 @@ Model * loadModel(string name){
 
 	glGenBuffers(1, &vbo);
 	glBindBuffer( GL_ARRAY_BUFFER, vbo );
-	glBufferData( GL_ARRAY_BUFFER, sizeof(float) * elemSize *8, &data[0], GL_STATIC_DRAW );
+	glBufferData( GL_ARRAY_BUFFER, sizeof(float) * data.size(), &data[0], GL_STATIC_DRAW );
 
 
 	glGenBuffers(1, &ebo);
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ebo);
 	glBufferData( GL_ELEMENT_ARRAY_BUFFER, elements.size() * sizeof(GLuint), &elements[0], GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*3));
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));
-
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), 0);
 	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);
+	if(useNormals){
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*3));
+		glEnableVertexAttribArray(1);
+	}
+	if(useTextures){
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*(useNormals?5:3)));
+		glEnableVertexAttribArray(2);
+	}
+	if(useNormals && useTextures){
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*8));
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*11));
+		glEnableVertexAttribArray(4);
+	}
 
 	glBindVertexArray(0);
 	Model * mod = new Model(vao, vbo, ebo, elements.size(), std::move(materials), std::move(matLib));
