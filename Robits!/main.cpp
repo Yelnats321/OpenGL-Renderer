@@ -19,6 +19,7 @@ int main(){
 	//monkey->setPosition(glm::vec3(2, 0, 0));
 	monkey->setScale(glm::vec3(0.8, 0.8, 0.8));*/
 	Model * floor2 = graphics.addModel("assets/room.obj");
+	//floor2->setScale(glm::vec3(0.1));
 	//floor2->setRotation(glm::vec3(3.14/2, 0,0));
 	//floor2->setPosition(glm::vec3(0,0,1));
 	/*Model * floor = graphics.addModel("floor.obj");

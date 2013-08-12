@@ -9,6 +9,7 @@ in vec3 NormalCamSpace;
 
 in vec4 ShadowCoord;
 
+uniform mat4 depthMVP;
 uniform vec3 lightPos;
 uniform float ambientIntensity;
 uniform sampler2D ambTex;
@@ -16,7 +17,7 @@ uniform sampler2D difTex;
 //uniform sampler2D specTex;
 uniform sampler2D alphaMask;
 uniform sampler2D normalMap;
-uniform sampler2DShadow shadowMap;
+uniform samplerCube shadowMap;
 uniform vec3 ambientColor;
 uniform vec3 specularColor;
 uniform vec3 diffuseColor;
@@ -59,12 +60,21 @@ void main() {
 //	float bias = 0.005*tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
 //	bias = clamp(bias, 0,0.01);
 	float bias = 0.005;
-	/*float visibility = 1;
-	if(texture(shadowMap, ShadowCoord.xy).x < ShadowCoord.z-bias)
+	float visibility = 1;
+	/*if(texture(shadowMap, ShadowCoord.xy).x < ShadowCoord.z-bias)
 		visibility = 0.1;*/
 	//if ((texture(shadowMap,vec3(ShadowCoord.xy, (ShadowCoord.z)/ShadowCoord.w))).x  <  (ShadowCoord.z-bias)/ShadowCoord.w )
-	float visibility = textureProj(shadowMap, vec4(ShadowCoord.xy, ShadowCoord.z-bias, ShadowCoord.w));
+//	vec3 visibility = vec3(texture(shadowMap, ShadowCoord.xyz).x);
+//	visibility /=100000;
+	float texDist = texture(shadowMap, ShadowCoord.xyz).x;
+	if(texDist < distance(lightPos, PositionWorldSpace)-bias)
+//	if(texture(shadowMap, ShadowCoord.xyz).x < distance(depthMVP * vec4(lightPos,1), depthMVP * vec4(PositionWorldSpace,1)))
+//		discard;
+		visibility = 0.1;
+//	if(texture(shadowMap,vec3(ShadowCoord.xyz, depth)) < (ShadowCoord.z-bias)/ShadowCoord.w)
+//		visibility = 0.1;
 	outColor =texture(difTex, uv).rgb* diffuseColor * lightPower* cosTheta *attenIntensity * visibility+
 		/*texture(specTex, uv).rgb**/ specularColor* lightPower* cosAlpha *attenIntensity * visibility+
 		texture(ambTex, uv).rgb* ambientColor* ambientIntensity;
+	outColor = vec3(texDist);
 }

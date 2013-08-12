@@ -99,26 +99,26 @@ void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
 	glGenTextures(1, &shadowTexture);
-	glBindTexture(GL_TEXTURE_2D, shadowTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, 800, 600, 0,GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-	glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE,GL_INTENSITY);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTexture, 0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	for(int i = 0; i < 6; i++){
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i	, 0,GL_DEPTH_COMPONENT16, 800, 800, 0,GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	}
 
 	glDrawBuffer(GL_NONE);
 
 	/*glGenRenderbuffers(1, &renderbuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 600);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 800);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);*/
 
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "Frame buffer dun goofed";
+		std::cout << "Frame buffer dun goofed "<<glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
 
 	glBindFramebuffer(GL_FRAMEBUFFER,0);
 }
@@ -148,38 +148,47 @@ void Graphics::setupQuadProg(string v, string f){
 void Graphics::update(float deltaTime){
 	input.update(deltaTime);
 
-	glViewport(0,0,800,600);
+	glViewport(0,0,800,800);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glUseProgram(shadowProgram);
 	/*glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);*/	
-	// Compute the MVP matrix from the light's point of view
-	glm::mat4 depthProjectionMatrix = /*glm::ortho<float>(-6,6,-6,6,0,20);*/glm::perspective(90.f, 1.f, 0.1f, 50.f);
+	glEnableVertexAttribArray(0);*/
+	GLint lightPos = glGetUniformLocation(shadowProgram, "lightPos");
+	GLint modelPos = glGetUniformLocation(shadowProgram, "M");
+	glUniformMatrix3fv(lightPos, 1, GL_FALSE, glm::value_ptr(player->getSavedPos()));
+	glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10,10,-10,10,0,10);//glm::perspective(90.f, 1.f, 0.1f, 50.f);
+	glm::mat4 moveMatrix = glm::lookAt(player->getSavedPos(), player->getSavedPos() + glm::vec3(0,0,-1), glm::vec3(1,0,0));
 	//std::cout << player->getPos().x << " " << player->getPos().y << " " << player->getPos().z << std::endl;
-	glClear( GL_DEPTH_BUFFER_BIT);
-	glBindTexture(GL_TEXTURE_2D, shadowTexture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-	for(auto i: models){
-		glm::mat4 depthMVP = depthProjectionMatrix *player->getSavedMatrix()*i->getModelMatrix();
-		glUniformMatrix4fv(glGetUniformLocation(shadowProgram, "depthMVP"),1, GL_FALSE, glm::value_ptr(depthMVP));
-		glBindVertexArray(i->vao);
-		glDrawElements(GL_TRIANGLES, i->triangles, GL_UNSIGNED_INT,0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glm::mat4 moveMat;
+	glm::translate(moveMat, -player->getSavedPos());
+	for(int loop = 0; loop < 6; ++loop){
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+loop, shadowTexture,0);
+		glClear( GL_DEPTH_BUFFER_BIT);
+		for(auto i: models){
+			glUniformMatrix4fv(modelPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
+			glm::mat4 depthMVP = depthProjectionMatrix*moveMatrix*i->getModelMatrix();
+			glUniformMatrix4fv(glGetUniformLocation(shadowProgram, "depthMVP"),1, GL_FALSE, glm::value_ptr(depthMVP));
+			glBindVertexArray(i->vao);
+			glDrawElements(GL_TRIANGLES, i->triangles, GL_UNSIGNED_INT,0);
+		}
 	}
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(mainProg);
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glViewport(0,0,800,600);
 
 	GLint MVPloc = glGetUniformLocation(mainProg, "MVP");
 	GLint viewPos = glGetUniformLocation(mainProg, "V");
-	GLint modelPos = glGetUniformLocation(mainProg, "M");
-	GLint lightPos = glGetUniformLocation(mainProg, "lightPos");
+	modelPos = glGetUniformLocation(mainProg, "M");
+	lightPos = glGetUniformLocation(mainProg, "lightPos");
 	GLint ambColor = glGetUniformLocation(mainProg, "ambientColor");
 	GLint difColor = glGetUniformLocation(mainProg, "diffuseColor");
 	GLint specColor = glGetUniformLocation(mainProg, "specularColor");
 	GLint shininess = glGetUniformLocation(mainProg, "shineFactor");
-	GLint depthMVPos = glGetUniformLocation(mainProg, "depthBiasMVP");
+	GLint depthBiasMVPpos = glGetUniformLocation(mainProg, "depthBiasMVP");
 	glUniform3fv(lightPos, 1, glm::value_ptr(player->getSavedPos()));
 
 	const glm::mat4 biasMatrix(
@@ -190,11 +199,12 @@ void Graphics::update(float deltaTime){
 		);
 
 	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_2D, shadowTexture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
 	for(auto i : models){
-		glm::mat4 depthMVP = depthProjectionMatrix *player->getSavedMatrix()*i->getModelMatrix();
+		glm::mat4 depthMVP = depthProjectionMatrix *moveMat *i->getModelMatrix();
 		glm::mat4 depthBiasMVP = biasMatrix*depthMVP;
-		glUniformMatrix4fv(depthMVPos, 1, GL_FALSE, glm::value_ptr(depthBiasMVP));
+		glUniformMatrix4fv(glGetUniformLocation(shadowProgram, "depthMVP"),1, GL_FALSE, glm::value_ptr(depthMVP));
+		glUniformMatrix4fv(depthBiasMVPpos, 1, GL_FALSE, glm::value_ptr(depthBiasMVP));
 		glm::mat4 matrix = proj * player->getCameraMatrix() * i->getModelMatrix();
 		/*std::cout << matrix[0][0] << " " << matrix[0][1] << " " << matrix[0][2] << " " <<matrix[0][3] << std::endl;
 		std::cout << matrix[1][0] << " " << matrix[1][1] << " " << matrix[1][2] << " " <<matrix[1][3] << std::endl;
@@ -252,7 +262,6 @@ void Graphics::update(float deltaTime){
 			}
 		}
 	}
-	glViewport(0, 0, 200, 150);
 
 	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindVertexArray(quadVAO);
@@ -261,13 +270,14 @@ void Graphics::update(float deltaTime){
 	glUseProgram(quadProgram);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, shadowTexture);
-	glBindBuffer(GL_ARRAY_BUFFER, quadBuffer);
-
-	glBindTexture(GL_TEXTURE_2D, shadowTexture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	glDrawArrays(GL_TRIANGLES,0,6);
-
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+	for(int loop = 0; loop < 6; loop++){
+		glUniform1f(glGetUniformLocation(quadProgram, "screen"), loop);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+loop, shadowTexture,0);
+		glViewport(100*loop, 0, 100, 100);
+		glDrawArrays(GL_TRIANGLES,0,6);
+	}
 	glfwPollEvents();
 	glfwSwapBuffers(window);
 }

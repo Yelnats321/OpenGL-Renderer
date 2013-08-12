@@ -13,13 +13,13 @@ out vec3 EyeDir;
 out vec3 NormalCamSpace;
 
 out vec4 ShadowCoord;
-
 uniform mat4 MVP;
 uniform mat4 M;
 uniform mat4 V;
 uniform vec3 lightPos;
 uniform bool bumpToggle;
 uniform mat4 depthBiasMVP;
+uniform mat4 depthMVP;
 
 void main() {
 	PositionWorldSpace = (M * vec4(position,1.0)).xyz;
@@ -27,8 +27,7 @@ void main() {
 	vec3 LightDirCamSpace = (V*vec4(lightPos, 1.0)).xyz - PositionCamSpace;
 	gl_Position = MVP * vec4(position, 1.0 );
 
-	ShadowCoord = depthBiasMVP * vec4(position, 1.0);
-
+	ShadowCoord = depthMVP * vec4(position, 1.0);
 	/*mat3 VM3x3 =mat3( (V*M)[0].xyz, (V*M)[1].xyz, (V*M)[2].xyz);
 	NormalCamSpace =VM3x3 *normalize(normal);
 	vec3 TangentCamSpace =VM3x3 *normalize(tangent);
