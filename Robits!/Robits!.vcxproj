@@ -123,6 +123,7 @@
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Settings.cpp" />
@@ -132,6 +133,7 @@
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Settings.h" />

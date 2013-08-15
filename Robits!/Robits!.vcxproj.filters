@@ -39,6 +39,9 @@
     <ClCompile Include="AssetLoader.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Settings.h">
@@ -60,6 +63,9 @@
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="AssetLoader.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
       <Filter>Graphics</Filter>
     </ClInclude>
   </ItemGroup>

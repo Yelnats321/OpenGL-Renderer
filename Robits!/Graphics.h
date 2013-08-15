@@ -1,13 +1,9 @@
 #pragma once
 
-#define _USE_MATH_DEFINES
-
+//glew before glfw because gl.h
 #include <GL/glew.h>
-#define GLFW_DLL
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include <vector>
 #include <string>
@@ -15,8 +11,8 @@ using std::vector;
 using std::string;
 
 #include "Input.h"
+#include "Player.h"
 class Model;
-class Player;
 
 class Graphics{
 	vector<Model *> models;
@@ -26,13 +22,14 @@ class Graphics{
 	//Texture shit
 	GLuint quadBuffer, quadProgram, quadVAO;
 	GLuint framebuffer, renderbuffer, shadowProgram, shadowTexture;
+	glm::mat4 sideViews[6];
 
 	GLuint whiteTex, blueTex;
 
 	glm::mat4 proj;
 
 	GLFWwindow * window;
-	Player * player;
+	Player player;
 	Input input;
 	void setupMainProg(string, string);
 	void setupShadowProg(string, string);
@@ -44,5 +41,4 @@ public:
 	bool isOpen() const;
 	Model * addModel(string);
 	GLFWwindow * getWindow() const;
-	void setPlayer(Player *);
 };

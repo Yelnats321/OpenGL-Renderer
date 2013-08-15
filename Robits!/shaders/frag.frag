@@ -9,7 +9,6 @@ in vec3 NormalCamSpace;
 
 in vec4 ShadowCoord;
 
-uniform mat4 depthMVP;
 uniform vec3 lightPos;
 uniform float ambientIntensity;
 uniform sampler2D ambTex;
@@ -17,7 +16,7 @@ uniform sampler2D difTex;
 //uniform sampler2D specTex;
 uniform sampler2D alphaMask;
 uniform sampler2D normalMap;
-uniform samplerCube shadowMap;
+uniform samplerCubeShadow shadowMap;
 uniform vec3 ambientColor;
 uniform vec3 specularColor;
 uniform vec3 diffuseColor;
@@ -25,11 +24,24 @@ uniform float shineFactor;
 
 layout(location = 0)out vec3 outColor;
 
-void main() {
+float VectorToDepthValue(vec3 Vec){
+    vec3 AbsVec = abs(Vec);
+    float LocalZcomp = max(AbsVec.x, max(AbsVec.y, AbsVec.z));
+
+    const float f = 50.0;
+    const float n = 0.1;
+    float NormZComp = (f+n) / (f-n) - (2*f*n)/(f-n)/LocalZcomp;
+    return (NormZComp + 1.0) * 0.5;
+}
+
+
+void main(){
 	vec2 uv = vec2(UV.x, 1-UV.y);
+	if(texture(alphaMask, uv).r != 1){
+		discard;
+	}
 
 	vec3 n = normalize(texture2D(normalMap, uv ).rgb*2-1);
-	//vec3 n = normalize(bumpToggle?(texture2D(normalMap, uv ).rgb*2-1) : NormalCamSpace);
 
 	vec3 l = normalize(LightDir);
 	float cosTheta = clamp(dot(n, l),0,1);
@@ -50,31 +62,19 @@ void main() {
 
 	float lightPower = 3;
 	vec3 lightVec = lightPos-PositionWorldSpace;
-	float attenIntensity = 1;
-	//float attenIntensity = 1/(1.0 +dot(lightVec, lightVec));
-	if(texture(alphaMask, uv).r != 1){
-		discard;
-	}
+	//float attenIntensity = 1;
+	float attenIntensity = 1/(1.0 +dot(lightVec, lightVec));
 
-	//float visibility = texture(shadowMap, vec3(ShadowCoord.xy, ShadowCoord.z/ShadowCoord.w));
-//	float bias = 0.005*tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
-//	bias = clamp(bias, 0,0.01);
-	float bias = 0.005;
-	float visibility = 1;
-	/*if(texture(shadowMap, ShadowCoord.xy).x < ShadowCoord.z-bias)
+	//float bias = 0.005*tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
+	//bias = clamp(bias, 0,0.01);
+	float bias = 0.0025;
+	/*float visibility = 1;
+	float texDist = texture(shadowMap, ShadowCoord.xyz/ShadowCoord.w).x;
+	float dist = VectorToDepthValue(lightVec);
+	if(texDist < dist-bias)
 		visibility = 0.1;*/
-	//if ((texture(shadowMap,vec3(ShadowCoord.xy, (ShadowCoord.z)/ShadowCoord.w))).x  <  (ShadowCoord.z-bias)/ShadowCoord.w )
-//	vec3 visibility = vec3(texture(shadowMap, ShadowCoord.xyz).x);
-//	visibility /=100000;
-	float texDist = texture(shadowMap, ShadowCoord.xyz).x;
-	if(texDist < distance(lightPos, PositionWorldSpace)-bias)
-//	if(texture(shadowMap, ShadowCoord.xyz).x < distance(depthMVP * vec4(lightPos,1), depthMVP * vec4(PositionWorldSpace,1)))
-//		discard;
-		visibility = 0.1;
-//	if(texture(shadowMap,vec3(ShadowCoord.xyz, depth)) < (ShadowCoord.z-bias)/ShadowCoord.w)
-//		visibility = 0.1;
+	float visibility = texture(shadowMap, vec4(ShadowCoord.xyz/ShadowCoord.w, VectorToDepthValue(lightVec)-bias));
 	outColor =texture(difTex, uv).rgb* diffuseColor * lightPower* cosTheta *attenIntensity * visibility+
 		/*texture(specTex, uv).rgb**/ specularColor* lightPower* cosAlpha *attenIntensity * visibility+
 		texture(ambTex, uv).rgb* ambientColor* ambientIntensity;
-	outColor = vec3(texDist);
 }

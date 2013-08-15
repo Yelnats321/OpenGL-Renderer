@@ -1,6 +1,9 @@
 #include "Player.h"
-#include "Settings.h"
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+
+#include "Settings.h"
+
 
 Player::Player():savedPos(0,1,3), camPosition(0.f, 0.3f, 0.f){
 	horizontalAngle =0.f;

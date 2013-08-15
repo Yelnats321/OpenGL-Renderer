@@ -1,24 +1,23 @@
 #include <iostream>
+//should be defined before every GLFW use, however it seems to do nothing
+#define GLFW_DLL
 
 #include "Graphics.h"
-#include "Settings.h"
 #include "Model.h"
-#include "Player.h"
 
 int main(){
 	Graphics graphics;
-	Player player;
-
-	graphics.setPlayer(&player);
-
 	//Model * dragon = graphics.addModel("sponza-x\\sponza.obj");
-	//dragon->setScale(glm::vec3(0.001, 0.001, 0.001));
+	//dragon->setScale(0.001, 0.001, 0.001);
 
 	/*Model * monkey = graphics.addModel("monkey.obj");
-	monkey->setRotation(glm::vec3(3.14/2, 0, 0));
-	//monkey->setPosition(glm::vec3(2, 0, 0));
-	monkey->setScale(glm::vec3(0.8, 0.8, 0.8));*/
+	monkey->setRotation(3.14/2, 0, 0);
+	//monkey->setPosition(2, 0, 0);
+	monkey->setScale(0.8, 0.8, 0.8);*/
 	Model * floor2 = graphics.addModel("assets/room.obj");
+	//floor2->setScale(0.3, 0.3, 0.3);
+	/*Model * floor = graphics.addModel("assets/room.obj");
+	floor->setPosition(10,0,0);
 	//floor2->setScale(glm::vec3(0.1));
 	//floor2->setRotation(glm::vec3(3.14/2, 0,0));
 	//floor2->setPosition(glm::vec3(0,0,1));

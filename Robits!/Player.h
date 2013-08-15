@@ -1,7 +1,9 @@
 #pragma once
 
-#include "Graphics.h"
+#define _USE_MATH_DEFINES
+
 #include <array>
+#include <glm/glm.hpp>
 
 class Player{
 	glm::mat4 camMatrix;

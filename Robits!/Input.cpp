@@ -1,10 +1,10 @@
 #include "Input.h"
 #include "Player.h"
+#include <GLFW/glfw3.h>
 
 #include <iostream>
 
-void Input::setPlayer(Player * p){
-	player = p;
+Input::Input(Player & p): player(p){
 }
 
 void Input::setWindow(GLFWwindow * w){
@@ -46,5 +46,5 @@ void Input::update(float deltaTime){
 		keys[6] = true;
 	}
 
-	player->update(keys, float(800/2 - xpos), float(600/2 - ypos), deltaTime);
+	player.update(keys, float(800/2 - xpos), float(600/2 - ypos), deltaTime);
 }

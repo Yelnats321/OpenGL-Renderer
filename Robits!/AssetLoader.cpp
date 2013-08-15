@@ -10,8 +10,12 @@ extern "C"{
 
 #include "Model.h"
 #include "Material.h"
+#include "Mesh.h"
 
+//make something similair but for models
 std::map<string, GLuint> textures;
+
+std::map<string, Mesh> meshes;
 
 GLuint genShaders(string vert, string frag){
 	std::ifstream file;
@@ -74,16 +78,16 @@ GLuint loadTexture(string name, bool sRGB){
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	int width, height, channels;
-	unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
-	if(sRGB)
+	unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);	if(sRGB)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	else
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4.0f);
 	glEnable(GL_TEXTURE_2D);
-	//glGenerateMipmap(GL_TEXTURE_2D);
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR/*_MIPMAP_LINEAR*/ );
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4.0f);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
 	SOIL_free_image_data(image);
 	if(image == nullptr){
 		std::cout <<" ***Error loading texture " + name + " due to " + SOIL_last_result()<<std::endl;
@@ -154,7 +158,6 @@ std::map<string, Material *> loadMaterialLibrary(string name){
 
 			else if(key == "illum")
 				currMat->illum = value;
-
 
 			else 
 				currMat->Tr = value;
@@ -227,12 +230,16 @@ struct GLuintData{
 	}
 };
 
-Model * loadModel(string name){
+const Mesh * loadMesh(string name){
+	if(meshes.find(name) != meshes.end()){
+		std::cout<<"Retrieved mesh " + name <<std::endl;
+		return &meshes.find(name)->second;
+	}
 	std::cout<<"Loading file " + name<<std::endl;
 	std::ifstream file;
 	file.open(name);
 	if(file.fail()){
-		std::cout << "Error reading file "+ name;
+		std::cout << "Error reading file "+ name << std::endl;;
 		return nullptr;
 	}
 	vector<string> line;
@@ -477,8 +484,8 @@ Model * loadModel(string name){
 		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*11));
 		glEnableVertexAttribArray(4);
 	}
-
-	glBindVertexArray(0);
-	Model * mod = new Model(vao, vbo, ebo, elements.size(), std::move(materials), std::move(matLib));
-	return mod;
+	std::cout << "SIZE " << elements.size()<<std::endl;
+	Mesh mesh(vao, vbo, ebo, elements.size(), std::move(materials), std::move(matLib));
+	meshes.emplace(name, std::move(mesh));
+	return &(meshes.find(name)->second); 
 }
