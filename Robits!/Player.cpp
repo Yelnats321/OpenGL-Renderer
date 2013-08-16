@@ -1,11 +1,10 @@
+#include "stdafx.h"
 #include "Player.h"
-#include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
-
+#include "Graphics.h"
 #include "Settings.h"
 
 
-Player::Player():savedPos(0,1,3), camPosition(0.f, 0.3f, 0.f){
+Player::Player(Graphics & g):graphics(g), savedPos(0,1,3), camPosition(0.f, 0.3f, 0.f){
 	horizontalAngle =0.f;
 	verticalAngle = -M_PI/2;
 }
@@ -16,8 +15,7 @@ const glm::mat4 & Player::getCameraMatrix() const{
 
 const glm::vec3 & Player::getSavedPos() const{
 	return savedPos;
-}const glm::mat4 & Player::getSavedMatrix() const{	return savedMat;} 
-const glm::vec3 & Player::getCamPos() const{
+}const glm::vec3 & Player::getCamPos() const{
 	return camPosition;
 }
 
@@ -81,6 +79,6 @@ void Player::update(std::array<bool, 7> & keys, float x, float y, float deltaTim
 
 	if(keys[6]){
 		savedPos = camPosition;
-		savedMat = camMatrix;
+		graphics.setLight();
 	}
 }

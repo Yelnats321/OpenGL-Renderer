@@ -1,13 +1,6 @@
 #pragma once
-#include <map>
-#include <vector>
-#include <string>
-#include <GL/glew.h>
 
-using std::vector;
-using std::string;
 struct Material;
-
 
 class Mesh{
 	//This keeps track of when usemtl is used, and what mtl is to be used
@@ -17,9 +10,9 @@ class Mesh{
 	const int size;
 public:
 	Mesh(GLuint, GLuint, GLuint, int, vector<std::pair<string, int> > &&, std::map<string, Material *> &&);
+	~Mesh();
 	const vector<std::pair<string, int>> & getMatCalls() const;
 	const Material * matData(string) const;
 	const int getSize() const;
-	~Mesh();
 	GLuint vao, vbo, ebo;
 };

@@ -1,15 +1,13 @@
+#include "stdafx.h"
 #include "Mesh.h"
 #include "Material.h"
 
-#include <iostream>
-
 Mesh::Mesh(GLuint a, GLuint b, GLuint e, int siz,vector<std::pair<string, int> > && m, std::map<string, Material *> && mm)
 	:vao(a), vbo(b), ebo(e),size(siz),  materials(std::move(m)), matMap(std::move(mm)){
-	std::cout << "SIZE " << getSize()<<std::endl;
 }
 
 Mesh::~Mesh(){
-	//Don't forget to delete all the textures
+	//Don't forget to delete all the textures and materials themselves
 	for(auto i:matMap){
 		glDeleteTextures(1,&i.second->map_Ka);
 		glDeleteTextures(1,&i.second->map_Kd);

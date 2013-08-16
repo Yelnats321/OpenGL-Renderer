@@ -127,6 +127,9 @@
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Settings.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AssetLoader.h" />
@@ -137,6 +140,7 @@
     <ClInclude Include="Model.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Settings.h" />
+    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -65,14 +65,9 @@ void main(){
 	//float attenIntensity = 1;
 	float attenIntensity = 1/(1.0 +dot(lightVec, lightVec));
 
-	//float bias = 0.005*tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
-	//bias = clamp(bias, 0,0.01);
-	float bias = 0.0025;
-	/*float visibility = 1;
-	float texDist = texture(shadowMap, ShadowCoord.xyz/ShadowCoord.w).x;
-	float dist = VectorToDepthValue(lightVec);
-	if(texDist < dist-bias)
-		visibility = 0.1;*/
+	//float bias = 0.0025*tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
+	//bias = clamp(bias, 0,0.005);
+	float bias = 0.001;
 	float visibility = texture(shadowMap, vec4(ShadowCoord.xyz/ShadowCoord.w, VectorToDepthValue(lightVec)-bias));
 	outColor =texture(difTex, uv).rgb* diffuseColor * lightPower* cosTheta *attenIntensity * visibility+
 		/*texture(specTex, uv).rgb**/ specularColor* lightPower* cosAlpha *attenIntensity * visibility+

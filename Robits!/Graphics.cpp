@@ -1,17 +1,12 @@
+#include "stdafx.h"
 #include "Graphics.h"
-#include <iostream>
-#include <map>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include "Settings.h"
 #include "Model.h"
-#include "Player.h"
 #include "Material.h"
 #include "AssetLoader.h"
+#include "Settings.h"
 #include "Mesh.h"
 
-Graphics::Graphics():player(), input(player){    glfwInit();
+Graphics::Graphics():player(*this), input(player){    glfwInit();
 	glfwWindowHint(GLFW_SAMPLES, 4); 
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
@@ -60,6 +55,9 @@ Graphics::~Graphics(){
 	for(auto i:models){
 		delete i;
 	}
+	//delete meshes after models, reasoning is so that models don't have dangling pointers
+	deleteMeshes();
+
 	glfwDestroyWindow(window);
     glfwTerminate();
 }
@@ -139,8 +137,6 @@ void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(
 
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Frame buffer dun goofed "<<glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
-
-	glBindFramebuffer(GL_FRAMEBUFFER,0);
 }
 
 void Graphics::setupQuadProg(string v, string f){
@@ -165,33 +161,33 @@ void Graphics::setupQuadProg(string v, string f){
 	glEnableVertexAttribArray(0);
 }
 
-void Graphics::update(float deltaTime){
-	input.update(deltaTime);
-
+void Graphics::setLight(){
 	glViewport(0,0,800,800);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glUseProgram(shadowProgram);
 
-		glClear( GL_DEPTH_BUFFER_BIT);
 	GLint depthMVPpos = glGetUniformLocation(shadowProgram, "depthMVP");
 	//don't forget to change the function in the program!!!!!!
 	//in the fragment shader bro
-	//don't go lower, or else you ahve to finick with the bias 
+	//don't go lower than 0.1 near, or else you ahve to finick with the bias 
 	glm::mat4 depthProjectionMatrix = glm::perspective(90.f, 1.f, 0.1f, 50.f);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
 	for(int loop = 0; loop < 6; ++loop){
 		glm::mat4 moveMatrix =glm::translate(sideViews[loop], -player.getSavedPos());
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+loop, shadowTexture,0);
+		glClear( GL_DEPTH_BUFFER_BIT);
 		for(auto i: models){
 			glm::mat4 depthMVP = depthProjectionMatrix*moveMatrix*i->getModelMatrix();
 			glUniformMatrix4fv(depthMVPpos,1, GL_FALSE, glm::value_ptr(depthMVP));
 			glBindVertexArray(i->getMesh()->vao);
-			
-			std::cout << " WARRAN T " <<i->getMesh();
 			glDrawElements(GL_TRIANGLES, i->getMesh()->getSize(), GL_UNSIGNED_INT,0);
-			std::cout << " WARRAN T " <<i->getMesh()->getSize();
 		}
 	}
+}
+
+void Graphics::update(float deltaTime){
+	input.update(deltaTime);
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(mainProg);
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

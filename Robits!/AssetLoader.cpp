@@ -1,21 +1,25 @@
-﻿#include "AssetLoader.h"
-#include <iostream>
+﻿#include "stdafx.h"
+#include "AssetLoader.h"
 #include <fstream>
 #include <sstream>
-#include <algorithm>
 
 extern "C"{
 #include <SOIL.h>
 }
 
-#include "Model.h"
 #include "Material.h"
 #include "Mesh.h"
 
-//make something similair but for models
 std::map<string, GLuint> textures;
 
-std::map<string, Mesh> meshes;
+std::map<string, Mesh *> meshes;
+//delte meshes will be called at the end of operation. there is no need for delete textures because each mesh can delete it's own textures
+//if two meshes share a texture, it is fine since the data has already been deleted (maybe)
+//possibly write mesh and texture manager
+void deleteMeshes(){
+	for(auto i : meshes)
+		delete i.second;
+}
 
 GLuint genShaders(string vert, string frag){
 	std::ifstream file;
@@ -233,7 +237,7 @@ struct GLuintData{
 const Mesh * loadMesh(string name){
 	if(meshes.find(name) != meshes.end()){
 		std::cout<<"Retrieved mesh " + name <<std::endl;
-		return &meshes.find(name)->second;
+		return meshes.find(name)->second;
 	}
 	std::cout<<"Loading file " + name<<std::endl;
 	std::ifstream file;
@@ -484,8 +488,7 @@ const Mesh * loadMesh(string name){
 		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*11));
 		glEnableVertexAttribArray(4);
 	}
-	std::cout << "SIZE " << elements.size()<<std::endl;
-	Mesh mesh(vao, vbo, ebo, elements.size(), std::move(materials), std::move(matLib));
-	meshes.emplace(name, std::move(mesh));
-	return &(meshes.find(name)->second); 
+	//Mesh mesh(vao, vbo, ebo, elements.size(), std::move(materials), std::move(matLib));
+	meshes.emplace(name, new Mesh(vao, vbo, ebo, elements.size(), std::move(materials), std::move(matLib)));
+	return meshes.find(name)->second; 
 }

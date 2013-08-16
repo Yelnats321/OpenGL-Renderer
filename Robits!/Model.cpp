@@ -1,9 +1,7 @@
+#include "stdafx.h"
 #include "Model.h"
-#include <glm/gtc/matrix_transform.hpp>
 //THE ORDER IS TRANSLATE, ROTATE, SCALE
 //TRANSLATE TO ORIGIN BEFORE APPLYING ANYTHING
-
-
 
 Model::Model(const Mesh * m):mesh(m), scale(1.0){
 }

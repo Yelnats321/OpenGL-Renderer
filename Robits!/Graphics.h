@@ -1,17 +1,6 @@
 #pragma once
-
-//glew before glfw because gl.h
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-
-#include <vector>
-#include <string>
-using std::vector;
-using std::string;
-
-#include "Input.h"
 #include "Player.h"
+#include "Input.h"
 class Model;
 
 class Graphics{
@@ -41,4 +30,5 @@ public:
 	bool isOpen() const;
 	Model * addModel(string);
 	GLFWwindow * getWindow() const;
+	void setLight();
 };

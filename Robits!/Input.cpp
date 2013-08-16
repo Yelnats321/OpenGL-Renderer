@@ -1,8 +1,6 @@
+#include "stdafx.h"
 #include "Input.h"
 #include "Player.h"
-#include <GLFW/glfw3.h>
-
-#include <iostream>
 
 Input::Input(Player & p): player(p){
 }

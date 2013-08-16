@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "Settings.h"
 
 const float Settings::MouseSpeed = 0.15f;

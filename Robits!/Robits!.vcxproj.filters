@@ -42,6 +42,9 @@
     <ClCompile Include="Mesh.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Settings.h">
@@ -67,6 +70,9 @@
     </ClInclude>
     <ClInclude Include="Mesh.h">
       <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

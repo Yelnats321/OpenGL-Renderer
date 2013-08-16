@@ -1,6 +1,5 @@
 #pragma once
 
-struct GLFWwindow;
 class Player;
 
 class Input{
