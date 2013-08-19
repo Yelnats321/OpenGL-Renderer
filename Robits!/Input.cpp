@@ -2,11 +2,7 @@
 #include "Input.h"
 #include "Player.h"
 
-Input::Input(Player & p): player(p){
-}
-
-void Input::setWindow(GLFWwindow * w){
-	window = w;
+Input::Input(Player & p, GLFWwindow * w): player(p), window(w){
 }
 
 void Input::update(float deltaTime){
@@ -17,7 +13,7 @@ void Input::update(float deltaTime){
 	glfwGetCursorPos(window, &xpos, &ypos);
 	glfwSetCursorPos(window, 800.0/2, 600.0/2);
 
-	std::array<bool, 7> keys= {};
+	std::array<bool, 8> keys= {};
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
 		keys[0] = true;
 	}
@@ -43,6 +39,9 @@ void Input::update(float deltaTime){
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS){
 		keys[6] = true;
 	}
-
+	if(glfwGetKey(window, GLFW_KEY_SPACE)==GLFW_PRESS){
+		keys[7] = true;
+	}
+	//should this be a thing?
 	player.update(keys, float(800/2 - xpos), float(600/2 - ypos), deltaTime);
 }

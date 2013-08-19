@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+//openGL
 #include <GL/glew.h>
 #define GLFW_DLL
 #include <GLFW/glfw3.h>
@@ -12,6 +13,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
-
+//bullet
+#include <btBulletDynamicsCommon.h>
 using std::string;
 using std::vector;
+using std::map;

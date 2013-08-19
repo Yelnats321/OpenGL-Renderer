@@ -17,7 +17,7 @@ uniform mat4 MVP;
 uniform mat4 M;
 uniform mat4 V;
 uniform vec3 lightPos;
-uniform bool bumpToggle;
+uniform bool toggleTextures;
 
 void main() {
 	PositionWorldSpace = (M * vec4(position,1.0)).xyz;
@@ -27,12 +27,14 @@ void main() {
 
 	ShadowCoord =vec4( PositionWorldSpace - lightPos,1);
 
-	NormalCamSpace =(V*M *normalize(vec4(normal,0.0))).xyz;
-	vec3 TangentCamSpace =(V*M* normalize(vec4(tangent, 0.0))).xyz;
-	vec3 BitangentCamSpace = (V*M* normalize(vec4(bitangent, 0.0))).xyz;
+	NormalCamSpace =(V*M * vec4(normal,0.0)).xyz;
 
-	mat3 TBN = transpose(mat3(TangentCamSpace, BitangentCamSpace, NormalCamSpace));
-
+	mat3 TBN = mat3 (1.0);
+	if(toggleTextures){
+		vec3 TangentCamSpace =(V*M* normalize(vec4(tangent, 0.0))).xyz;
+		vec3 BitangentCamSpace = (V*M* normalize(vec4(bitangent, 0.0))).xyz;
+		TBN = transpose(mat3(TangentCamSpace, BitangentCamSpace, NormalCamSpace));
+	}
 	LightDir = TBN * LightDirCamSpace;
 	EyeDir = TBN * (-PositionCamSpace);
 

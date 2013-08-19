@@ -1,7 +1,6 @@
 #pragma once
-#include "Player.h"
-#include "Input.h"
 class Model;
+class Player;
 
 class Graphics{
 	vector<Model *> models;
@@ -17,9 +16,9 @@ class Graphics{
 
 	glm::mat4 proj;
 
+	Player * player;
+
 	GLFWwindow * window;
-	Player player;
-	Input input;
 	void setupMainProg(string, string);
 	void setupShadowProg(string, string);
 	void setupQuadProg(string, string);
@@ -30,5 +29,6 @@ public:
 	bool isOpen() const;
 	Model * addModel(string);
 	GLFWwindow * getWindow() const;
+	void setPlayer(Player *);
 	void setLight();
 };

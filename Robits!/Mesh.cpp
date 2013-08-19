@@ -2,8 +2,8 @@
 #include "Mesh.h"
 #include "Material.h"
 
-Mesh::Mesh(GLuint a, GLuint b, GLuint e, int siz,vector<std::pair<string, int> > && m, std::map<string, Material *> && mm)
-	:vao(a), vbo(b), ebo(e),size(siz),  materials(std::move(m)), matMap(std::move(mm)){
+Mesh::Mesh(GLuint a, GLuint b, GLuint e, int siz, bool tex, vector<std::pair<string, int> > && m, map<string, Material *> && mm)
+	:vao(a), vbo(b), ebo(e),size(siz), textures(tex), materials(std::move(m)), matMap(std::move(mm)){
 }
 
 Mesh::~Mesh(){
@@ -31,3 +31,4 @@ const Material * Mesh::matData(string name)const{
 }
 
 const int Mesh::getSize() const{return size;}
+const bool Mesh::useTextures() const{return textures;}

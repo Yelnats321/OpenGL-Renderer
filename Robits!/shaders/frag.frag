@@ -21,6 +21,7 @@ uniform vec3 ambientColor;
 uniform vec3 specularColor;
 uniform vec3 diffuseColor;
 uniform float shineFactor;
+uniform bool toggleTextures;
 
 layout(location = 0)out vec3 outColor;
 
@@ -40,8 +41,10 @@ void main(){
 	if(texture(alphaMask, uv).r != 1){
 		discard;
 	}
-
-	vec3 n = normalize(texture2D(normalMap, uv ).rgb*2-1);
+	
+	vec3 n = normalize(NormalCamSpace);
+	if(toggleTextures)
+		n = normalize(texture2D(normalMap, uv ).rgb*2-1);
 
 	vec3 l = normalize(LightDir);
 	float cosTheta = clamp(dot(n, l),0,1);
@@ -57,7 +60,7 @@ void main(){
 
 	float cosAlpha = clamp(dot(n, halfAng),0,1);
 
-	cosAlpha = pow(cosAlpha, shineFactor);
+	cosAlpha = pow(cosAlpha,shineFactor);
 	cosAlpha = cosTheta==0?0:cosAlpha;
 
 	float lightPower = 3;

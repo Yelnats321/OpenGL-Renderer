@@ -6,7 +6,6 @@ class Input{
 	GLFWwindow * window;
 	Player & player;
 public:
-	Input(Player &);
-	void setWindow(GLFWwindow *);
+	Input(Player &, GLFWwindow *);
 	void update(float);
 };

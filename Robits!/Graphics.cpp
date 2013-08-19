@@ -5,8 +5,9 @@
 #include "AssetLoader.h"
 #include "Settings.h"
 #include "Mesh.h"
+#include "Player.h"
 
-Graphics::Graphics():player(*this), input(player){    glfwInit();
+Graphics::Graphics(){    glfwInit();
 	glfwWindowHint(GLFW_SAMPLES, 4); 
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
@@ -21,7 +22,6 @@ Graphics::Graphics():player(*this), input(player){    glfwInit();
 	glewExperimental = GL_TRUE;
 	glewInit();
 
-	input.setWindow(window);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -173,7 +173,7 @@ void Graphics::setLight(){
 	glm::mat4 depthProjectionMatrix = glm::perspective(90.f, 1.f, 0.1f, 50.f);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
 	for(int loop = 0; loop < 6; ++loop){
-		glm::mat4 moveMatrix =glm::translate(sideViews[loop], -player.getSavedPos());
+		glm::mat4 moveMatrix =glm::translate(sideViews[loop], -player->getSavedPos());
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+loop, shadowTexture,0);
 		glClear( GL_DEPTH_BUFFER_BIT);
 		for(auto i: models){
@@ -186,8 +186,6 @@ void Graphics::setLight(){
 }
 
 void Graphics::update(float deltaTime){
-	input.update(deltaTime);
-	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(mainProg);
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -202,20 +200,22 @@ void Graphics::update(float deltaTime){
 	GLint difColor = glGetUniformLocation(mainProg, "diffuseColor");
 	GLint specColor = glGetUniformLocation(mainProg, "specularColor");
 	GLint shininess = glGetUniformLocation(mainProg, "shineFactor");
-	glUniform3fv(lightPos, 1, glm::value_ptr(player.getSavedPos()));
+	GLint toggleTextures = glGetUniformLocation(mainProg, "toggleTextures");
+	glUniform3fv(lightPos, 1, glm::value_ptr(player->getSavedPos()));
 
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
 	for(auto i : models){
-		glm::mat4 matrix = proj * player.getCameraMatrix() * i->getModelMatrix();
+		glm::mat4 matrix = proj * player->getCameraMatrix() * i->getModelMatrix();
 		/*std::cout << matrix[0][0] << " " << matrix[0][1] << " " << matrix[0][2] << " " <<matrix[0][3] << std::endl;
 		std::cout << matrix[1][0] << " " << matrix[1][1] << " " << matrix[1][2] << " " <<matrix[1][3] << std::endl;
 		std::cout << matrix[2][0] << " " << matrix[2][1] << " " << matrix[2][2] << " " <<matrix[2][3] << std::endl;
 		std::cout << matrix[3][0] << " " << matrix[3][1] << " " << matrix[3][2] << " " <<matrix[3][3] << std::endl;
 		std::cout << std::endl;*/
-		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player.getCameraMatrix()));
+		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player->getCameraMatrix()));
 		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, glm::value_ptr(matrix));
 		glUniformMatrix4fv(modelPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
+		glUniform1f(toggleTextures, i->getMesh()->useTextures());
 		glBindVertexArray(i->getMesh()->vao);
 
 		for(auto mats = i->getMesh()->getMatCalls().begin(); mats != i->getMesh()->getMatCalls().end(); ++mats){
@@ -249,6 +249,7 @@ void Graphics::update(float deltaTime){
 			else{
 				glBindTexture(GL_TEXTURE_2D, whiteTex);
 			}
+			//no bump map? use 127,255,127 instead (0,1,0)
 			glActiveTexture(GL_TEXTURE4);
 			if(currMat->map_bump!=0){
 				glBindTexture(GL_TEXTURE_2D, currMat->map_bump);
@@ -299,4 +300,8 @@ bool Graphics::isOpen() const{
 
 GLFWwindow * Graphics::getWindow() const{
 	return window;
+}
+
+void Graphics::setPlayer(Player * p){
+	player = p;
 }
