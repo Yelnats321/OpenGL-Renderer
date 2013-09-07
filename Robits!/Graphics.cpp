@@ -52,7 +52,7 @@ Graphics::~Graphics(){
 	glDeleteTextures(1, &blueTex);
 
 	glDeleteProgram(mainProg);
-	for(auto i:models){
+	for(const auto & i:models){
 		delete i;
 	}
 	//delete meshes after models, reasoning is so that models don't have dangling pointers
@@ -176,7 +176,7 @@ void Graphics::setLight(){
 		glm::mat4 moveMatrix =glm::translate(sideViews[loop], -player->getSavedPos());
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+loop, shadowTexture,0);
 		glClear( GL_DEPTH_BUFFER_BIT);
-		for(auto i: models){
+		for(const auto & i: models){
 			glm::mat4 depthMVP = depthProjectionMatrix*moveMatrix*i->getModelMatrix();
 			glUniformMatrix4fv(depthMVPpos,1, GL_FALSE, glm::value_ptr(depthMVP));
 			glBindVertexArray(i->getMesh()->vao);
@@ -185,7 +185,7 @@ void Graphics::setLight(){
 	}
 }
 
-void Graphics::update(float deltaTime){
+void Graphics::update(){
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(mainProg);
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -205,7 +205,7 @@ void Graphics::update(float deltaTime){
 
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
-	for(auto i : models){
+	for(const auto & i : models){
 		glm::mat4 matrix = proj * player->getCameraMatrix() * i->getModelMatrix();
 		/*std::cout << matrix[0][0] << " " << matrix[0][1] << " " << matrix[0][2] << " " <<matrix[0][3] << std::endl;
 		std::cout << matrix[1][0] << " " << matrix[1][1] << " " << matrix[1][2] << " " <<matrix[1][3] << std::endl;
@@ -284,6 +284,7 @@ void Graphics::update(float deltaTime){
 		glViewport(100*loop, 0, 100, 100);
 		glDrawArrays(GL_TRIANGLES,0,6);
 	}*/
+
 	glfwPollEvents();
 	glfwSwapBuffers(window);
 }

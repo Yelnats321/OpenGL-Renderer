@@ -4,28 +4,33 @@
 #include "Settings.h"
 #include "Physics.h"
 
-
 Player::Player(Graphics & g, Physics & p):graphics(g), physics(p), savedPos(0,1,3), camPosition(0.f, 0.3f, 0.f){
 	horizontalAngle =0.f;
 	verticalAngle = -M_PI/2;
-	
-	playerShape = new btCapsuleShape(1, 2);
-	btDefaultMotionState* playerMotionState = new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1),btVector3(0,1,0)));
-	btScalar mass = 60;
-	btVector3 fallInertia(0,0,0);
-	playerShape->calculateLocalInertia(mass,fallInertia);
-	playerBody = new btRigidBody(mass,playerMotionState,playerShape,fallInertia);
-	playerBody->setActivationState(DISABLE_DEACTIVATION);
-	playerBody->setAngularFactor(btVector3(0,1,0));
 
-	physics.addRigidBody(playerBody);
+	physMat = physics.getPhysics()->createMaterial(0.5, 0.5, 0.1);
+	//physBody = PxCreateDynamic(*physics.getPhysics(), PxTransform(PxVec3(0, 2, 0)), PxSphereGeometry(1), *physMat, 1);
+	//physics.getScene()->addActor(*physBody);
+
+	PxCapsuleControllerDesc desc;
+	desc.height = 1.25;
+	desc.radius = 0.25;
+	desc.position = PxExtendedVec3(0,10,0);
+	desc.material = physMat;
+	desc.upDirection = PxVec3(0,1,0);
+	//desc.slopeLimit = cosf(M_PI/4);
+	desc.density = 1;
+	desc.stepOffset = 0.5;
+	controller = physics.getControllerManager()->createController(*physics.getPhysics(), physics.getScene(), desc);
+	std::cout <<controller->getPosition().x<< " START POS SDASDS "<< controller->getPosition().x - controller->getFootPosition().x - controller->getContactOffset()<<std::endl;
 }
 
 Player::~Player(){
-	physics.removeRigidBody(playerBody);
-	delete playerBody->getMotionState();
-	delete playerBody;
-	delete playerShape;
+	//physics.getScene()->removeActor(*physBody);
+	//physBody->release();
+	physMat->release();
+
+	controller->release();
 }
 
 const glm::mat4 & Player::getCameraMatrix() const{
@@ -65,13 +70,13 @@ void Player::update(std::array<bool, 8> & keys, float x, float y, float deltaTim
 		);
 
 	glm::vec3 up = glm::cross( right, direction );
-	btTransform trans;
-	playerBody->getMotionState()->getWorldTransform(trans);
-	camPosition.z = trans.getOrigin().z();
-	camPosition.y = trans.getOrigin().y();
-	camPosition.x = trans.getOrigin().x();
+	PxExtendedVec3 physPos = controller->getPosition();
+	//PxVec3 physPos = physBody->getGlobalPose().p;
+	camPosition.x = physPos.x;
+	camPosition.y = physPos.y+0.875;
+	camPosition.z = physPos.z;
 
-	btScalar forw = 0, righ = 0;
+	float forw = 0, righ = 0;
 	// Move forward
 	if (keys[0]){
 		//camPosition += forward * deltaTime * Settings::Speed;
@@ -95,34 +100,61 @@ void Player::update(std::array<bool, 8> & keys, float x, float y, float deltaTim
 		//camPosition -= right * deltaTime * Settings::Speed;
 		forw -= right.z;
 		righ -= right.x;
+	}	/*if(keys[4]){	camPosition += glm::vec3(0,1,0)*deltaTime *Settings::Speed;	}	if(keys[5]){	camPosition -= glm::vec3(0,1,0)*deltaTime *Settings::Speed;	}*/
+
+	PxControllerState state;
+	controller->getState(state);
+	bool grounded = state.collisionFlags & PxControllerFlag::eCOLLISION_DOWN;
+	if(keys[7]){
+		/*physics.getScene()->removeActor(*controller->getActor());
+		//physBody->addForce(PxVec3(0, 100,0));
+		PxSweepHit hitInfo;
+		PxVec3 centerPos;
+		centerPos.x = controller->getPosition().x;
+		centerPos.y = controller->getPosition().y;
+		centerPos.z = controller->getPosition().z;
+		/*PxVec3 botPos;
+		botPos.x = controller->getFootPosition().x;
+		botPos.y = controller->getFootPosition().y-controller->getContactOffset();
+		botPos.z = controller->getFootPosition().z;
+		PxVec3 topPos(centerPos);
+		topPos.y = topPos.y + (centerPos.y-botPos.y);*/
+		/*bool blockingHit;
+		const PxU32 bufferSize = 256;
+		PxSweepHit hitBuffer[bufferSize];
+		PxI32 nbHits = physics.getScene()->sweepMultiple(PxCapsuleGeometry(0.25+controller->getContactOffset(), 1.25/2), PxTransform(centerPos), PxVec3(0,-1,0), 0.1, PxSceneQueryFlags(PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eINITIAL_OVERLAP_KEEP),
+			hitBuffer, bufferSize, blockingHit);
+		std::cout << nbHits << " " <<blockingHit<< " ASDSADASDAS DSAD "<<std::endl;*/
+		//bool gotHit = physics.getScene()->sweepSingle(PxCapsuleGeometry(0.25+controller->getContactOffset(), 1.25/2), PxTransform(centerPos),-controller->getUpDirection(), 0.1, PxSceneQueryFlags(PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eINITIAL_OVERLAP_KEEP|PxSceneQueryFlag::eNORMAL), hitInfo);
+		//bool gotHit = physics.getScene()->sweepSingle(PxCapsuleGeometry(0.25, 1.25), PxTransform(centerPos),PxVec3(0,-1,0), controller->getContactOffset(), PxSceneQueryFlags(), hitInfo);
+		if(grounded){
+			gravity = 20*Settings::Timestep;
+			std::cout << "Ray charles came back true "<<std::endl;
+		}
+		//physics.getScene()->addActor(*controller->getActor());
 	}
-	forw *= Settings::Speed;
-	righ *= Settings::Speed;
-	if(trans.getOrigin().getY() <=2)
-		playerBody->applyCentralForce(btVector3(righ, 0, forw));
-	//playerBody->setLinearVelocity(btVector3(righ, playerBody->getLinearVelocity().y(), forw));
-	/*if(keys[4]){
-		camPosition += glm::vec3(0,1,0)*deltaTime *Settings::Speed;
+	forw *= Settings::Speed * Settings::Timestep;
+	righ *= Settings::Speed * Settings::Timestep;
+	if(!grounded){
+		gravity += physics.getScene()->getGravity().y*Settings::Timestep/10;
+		if(gravity < -20*Settings::Timestep)
+			gravity = -20 * Settings::Timestep;
 	}
-	if(keys[5]){
-		camPosition -= glm::vec3(0,1,0)*deltaTime *Settings::Speed;
-	}*/
-	camMatrix = glm::lookAt(
-		camPosition,
-		camPosition+direction,
-		up
-		);
+	else if(gravity <0)
+		gravity = 0;
+	//physBody->addForce(PxVec3(righ, 0, forw));
+	//POSSIBLY REMOVE DELTA TIME IN FAVOR OF THE TIEMSTEP THING????????
+	controller->move(PxVec3(righ, gravity, forw), Settings::MinMoveDist, deltaTime, NULL);
+
 
 	if(keys[6]){
 		savedPos = camPosition;
 		graphics.setLight();
 	}
-	if(keys[7]){
-		if(trans.getOrigin().getY() <=2){
-			playerBody->applyCentralImpulse(btVector3(0,300,0));
-			std::cout << "UH OH SPAGHETTIOS ";
-		}
-	}
 
-
+	camMatrix = glm::lookAt(
+		camPosition,
+		camPosition+direction,
+		up
+		);
 }

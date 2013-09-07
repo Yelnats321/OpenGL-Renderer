@@ -8,7 +8,7 @@ Mesh::Mesh(GLuint a, GLuint b, GLuint e, int siz, bool tex, vector<std::pair<str
 
 Mesh::~Mesh(){
 	//Don't forget to delete all the textures and materials themselves
-	for(auto i:matMap){
+	for(const auto & i:matMap){
 		glDeleteTextures(1,&i.second->map_Ka);
 		glDeleteTextures(1,&i.second->map_Kd);
 		glDeleteTextures(1,&i.second->map_d);

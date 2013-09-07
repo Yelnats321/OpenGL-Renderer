@@ -2,59 +2,73 @@
 #include "Physics.h"
 
 Physics::Physics(){
-	broadphase = new btDbvtBroadphase();
-	collisionConfiguration = new btDefaultCollisionConfiguration();
-	dispatcher = new btCollisionDispatcher(collisionConfiguration);
-	solver = new btSequentialImpulseConstraintSolver;
-	dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,broadphase,solver,collisionConfiguration);
-	dynamicsWorld->setGravity(btVector3(0,-10,0));
+	static PxDefaultErrorCallback defaultErrorCallback;
+	static PxDefaultAllocator defaultAllocatorCallback;
+	pxFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, defaultAllocatorCallback, defaultErrorCallback);
+	pxPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *pxFoundation, PxTolerancesScale());
+	pxCooking = PxCreateCooking(PX_PHYSICS_VERSION, *pxFoundation, PxCookingParams());
+	pxControllerManager = PxCreateControllerManager(*pxFoundation);
 
-	collisionShapes["ground"] = new btBoxShape(btVector3(100,0,100));
+	PxSceneDesc sceneDesc(pxPhysics->getTolerancesScale());
+	sceneDesc.gravity = PxVec3(0, -9.81f, 0);
 
-	btDefaultMotionState* groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1), btVector3(0,0,0)));
-	btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI(0,groundMotionState,collisionShapes["ground"]);
-	rigidBodies["ground"] = new btRigidBody(groundRigidBodyCI);
-	dynamicsWorld->addRigidBody(rigidBodies["ground"]);
+	if(!sceneDesc.cpuDispatcher){
+		pxCpuDispatcher = PxDefaultCpuDispatcherCreate(1);
+		sceneDesc.cpuDispatcher = pxCpuDispatcher;
+	}
+	if(!sceneDesc.filterShader)
+		sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+	pxScene = pxPhysics->createScene(sceneDesc);
 
+	/*floorMat = pxPhysics->createMaterial(0.5, 0.5, 0.1);
+	floorRigid = PxCreatePlane(*pxPhysics, PxPlane(PxVec3(0,1,0), 0), *floorMat);
+	if(!floorRigid)
+		std::cout << "Can't make floor for some reason ";
+	floorRigid->setName("floor");
+	pxScene->addActor(*floorRigid);*/
 
-	/*collisionShapes["fall"] = new btSphereShape(1);
-	btDefaultMotionState* fallMotionState = new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1),btVector3(0,50,0)));
-	btScalar mass = 1;
-	btVector3 fallInertia(0,0,0);
-	collisionShapes["fall"]->calculateLocalInertia(mass,fallInertia);
-	btRigidBody::btRigidBodyConstructionInfo fallRigidBodyCI(mass,fallMotionState,collisionShapes["fall"],fallInertia);
-	rigidBodies["fall"] = new btRigidBody(fallRigidBodyCI);
-	dynamicsWorld->addRigidBody(rigidBodies["fall"]);*/
+	PxDefaultFileInputData data("assets/test1.xml");
+	PxCollection* bufferCollection = pxPhysics->createCollection();
+	PxCollection* sceneCollection = pxPhysics->createCollection();
+	PxStringTable*  stringTable = &PxStringTableExt::createStringTable(pxFoundation->getAllocator()); //stores names?
+	/*PxUserReferences* externalRefs = NULL;// pxPhysics->createUserReferences();//we assume there are no external refs
+	PxUserReferences * userRefs =  NULL;//  pxPhysics->createUserReferences();//would be used to receive refs and then pass to dependent deserialization calls*/
+
+	repx::deserializeFromRepX(data, *pxPhysics, *pxCooking, stringTable, NULL, *bufferCollection, *sceneCollection, NULL);
+	pxPhysics->addCollection(*sceneCollection, *pxScene); //add the scene level objects to the PxScene scene.
+
+	int numActors = sceneCollection->getNbObjects();
+	for(int i = 0; i < numActors; ++i){
+		PxSerializable * s = sceneCollection->getObject(i);
+		if(s->getConcreteType() == PxConcreteType::eRIGID_STATIC){
+			PxActor * r = static_cast<PxActor *>(s);
+			std::cout << r->getName()<<std::endl;
+		}
+	}
+
+	bufferCollection->release();
+	sceneCollection->release();
+	stringTable->release();
 }
 
 Physics::~Physics(){
-	std::cout <<dynamicsWorld->getNumCollisionObjects();
-	for(auto i: rigidBodies){
-		dynamicsWorld->removeRigidBody(i.second);
-		delete i.second->getMotionState();
-		delete i.second;
-	}
-	for(auto i: collisionShapes)
-		delete i.second;
-	delete dynamicsWorld;
-	delete solver;
-	delete dispatcher;
-	delete collisionConfiguration;
-	delete broadphase;
+	/*pxScene->removeActor(*floorRigid);
+	floorRigid->release();
+	floorMat->release();*/
+
+	pxControllerManager->release();
+	pxCooking->release();
+	pxCpuDispatcher->release();
+	pxScene->release();
+	pxPhysics->release();
+	pxFoundation->release();
 }
 
-void Physics::addRigidBody(btRigidBody * rb){
-	dynamicsWorld->addRigidBody(rb);
+void Physics::update(float deltaTime){
+	pxScene->simulate(deltaTime);
+	pxScene->fetchResults(true);
 }
 
-void Physics::removeRigidBody(btRigidBody * rb){
-	dynamicsWorld->removeRigidBody(rb);
-}
-
-void Physics::update(btScalar dt){
-	dynamicsWorld->stepSimulation(dt, 2);
-	
-	/*btTransform trans;
-	rigidBodies["fall"]->getMotionState()->getWorldTransform(trans);
-	std::cout << "sphere height: " << trans.getOrigin().getY() << std::endl;*/
-}
+PxPhysics * Physics::getPhysics(){return pxPhysics;}
+PxScene * Physics::getScene(){return pxScene;}
+PxControllerManager * Physics::getControllerManager(){return pxControllerManager;}

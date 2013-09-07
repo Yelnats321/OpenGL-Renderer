@@ -25,7 +25,7 @@ class Graphics{
 public:
 	Graphics();
 	~Graphics();
-	void update(float);
+	void update();
 	bool isOpen() const;
 	Model * addModel(string);
 	GLFWwindow * getWindow() const;

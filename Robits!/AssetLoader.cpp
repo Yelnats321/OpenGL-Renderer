@@ -17,8 +17,10 @@ map<string, Mesh *> meshes;
 //if two meshes share a texture, it is fine since the data has already been deleted (maybe)
 //possibly write mesh and texture manager
 void deleteMeshes(){
-	for(auto i : meshes)
+	for(const auto & i : meshes){
 		delete i.second;
+	}
+	meshes.clear();
 }
 
 GLuint genShaders(string vert, string frag){
@@ -89,6 +91,7 @@ GLuint loadTexture(string name, bool sRGB){
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4.0f);
+	//TODO: this doesn't work on radeon cards maybe
 	glEnable(GL_TEXTURE_2D);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -129,7 +132,7 @@ map<string, Material *> loadMaterialLibrary(string name){
 
 	Material * currMat;
 
-	for(auto itr:line){
+	for(const auto & itr:line){
 		string key;
 		std::istringstream ss(itr);
 		ss >> std::ws>> key >> std::ws;
@@ -261,7 +264,7 @@ const Mesh * loadMesh(string name){
 	vector<std::pair<std::string, int> > materials;
 	map<string, Material *>matLib;
 
-	for(auto itr : line){
+	for(const auto & itr : line){
 		string key;
 		std::istringstream ss(itr);
 		ss >> std::ws>> key >> std::ws;

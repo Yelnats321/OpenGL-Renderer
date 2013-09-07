@@ -3,6 +3,8 @@
 class Graphics;
 class Physics;
 
+using namespace physx;
+
 class Player{
 	glm::mat4 camMatrix;
 	glm::vec3 camPosition;
@@ -10,9 +12,12 @@ class Player{
 	//for camera testing doo doo
 	glm::vec3 savedPos;
 	Graphics & graphics;
-	btRigidBody * playerBody;
-	btCollisionShape * playerShape;
 	Physics & physics;
+
+	PxMaterial * physMat;
+	//PxRigidBody * physBody;
+	PxController * controller;
+	PxReal gravity;
 public:
 	Player(Graphics &, Physics &);
 	~Player();

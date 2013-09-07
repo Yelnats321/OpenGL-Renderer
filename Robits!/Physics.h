@@ -1,17 +1,22 @@
 #pragma once
 
+using namespace physx;
+
 class Physics{
-	btBroadphaseInterface* broadphase;
-	btDefaultCollisionConfiguration* collisionConfiguration;
-	btCollisionDispatcher* dispatcher;
-	btSequentialImpulseConstraintSolver* solver;
-	btDiscreteDynamicsWorld* dynamicsWorld;
-	map<string, btCollisionShape *> collisionShapes;
-	map<string, btRigidBody *> rigidBodies;
+	PxFoundation * pxFoundation;
+	PxPhysics * pxPhysics;
+	PxScene * pxScene;
+	PxDefaultCpuDispatcher * pxCpuDispatcher;
+	PxCooking * pxCooking;
+	PxControllerManager * pxControllerManager;
+
+	/*PxMaterial * floorMat;
+	PxRigidStatic * floorRigid;*/
 public:
 	Physics();
 	~Physics();
-	void update(btScalar);
-	void addRigidBody(btRigidBody *);
-	void removeRigidBody(btRigidBody *);
+	void update(float);
+	PxScene * getScene();
+	PxPhysics * getPhysics();
+	PxControllerManager * getControllerManager();
 };
