@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Model.h"
+#include "PhysXGLMHelper.h"
 //THE ORDER IS TRANSLATE, ROTATE, SCALE
 //TRANSLATE TO ORIGIN BEFORE APPLYING ANYTHING
 
@@ -36,8 +37,25 @@ void Model::setPosition(float x, float y, float z){
 
 void Model::change(){
 	matrix = glm::mat4(1.0);
-	matrix = glm::translate(matrix, position) *glm::toMat4(rotation);
+	matrix = glm::translate(matrix, position-origin)*glm::toMat4(rotation);
 	matrix = glm::scale(matrix, scale);
 }
 
+void Model::setTransform(PxTransform & trans){
+	position = ptog(trans.p);
+	//rotation = ptog(trans.q);
+	change();
+}
+
+void Model::setOrigin(PxVec3 & pos){
+	origin = ptog(pos);
+}
+
 const Mesh * Model::getMesh() const{return mesh;}
+
+/*DynamicModel::DynamicModel(const Mesh * m, PxRigidActor * r):Model(m), actor(r){
+}
+
+DynamicModel::~DynamicModel(){
+	actor->release();
+}*/

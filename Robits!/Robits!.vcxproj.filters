@@ -16,6 +16,12 @@
     <Filter Include="Graphics">
       <UniqueIdentifier>{6cac0b4c-4caa-449c-9667-d0b2af0d0b19}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Data Files">
+      <UniqueIdentifier>{29f6ca2d-e803-401a-9408-bd5e3fcba225}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Physics">
+      <UniqueIdentifier>{17c0a47c-f0a6-4eb1-9971-563470a2da92}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -36,17 +42,20 @@
     <ClCompile Include="Model.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="AssetLoader.cpp">
-      <Filter>Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="Mesh.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AssetLoader.cpp">
+      <Filter>Data Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ObjFile.cpp">
+      <Filter>Data Files</Filter>
+    </ClCompile>
     <ClCompile Include="Physics.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Physics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -65,20 +74,26 @@
     <ClInclude Include="Model.h">
       <Filter>Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="Material.h">
-      <Filter>Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="AssetLoader.h">
-      <Filter>Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="Mesh.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AssetLoader.h">
+      <Filter>Data Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysXGLMHelper.h">
+      <Filter>Data Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjFile.h">
+      <Filter>Data Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
+      <Filter>Data Files</Filter>
+    </ClInclude>
     <ClInclude Include="Physics.h">
-      <Filter>Header Files</Filter>
+      <Filter>Physics</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

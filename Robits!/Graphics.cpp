@@ -6,6 +6,8 @@
 #include "Settings.h"
 #include "Mesh.h"
 #include "Player.h"
+#include "Physics.h"
+#include "ObjFile.h"
 
 Graphics::Graphics(){    glfwInit();
 	glfwWindowHint(GLFW_SAMPLES, 4); 
@@ -35,7 +37,7 @@ Graphics::Graphics(){    glfwInit();
 
 	setupMainProg("shaders/vert.vert", "shaders/frag.frag");
 	setupShadowProg("shaders/passShadow.vert","shaders/passShadow.frag");
-	setupQuadProg("shaders/pass.vert", "shaders/pass.frag");
+	//setupQuadProg("shaders/pass.vert", "shaders/pass.frag");
 }
 
 Graphics::~Graphics(){
@@ -44,19 +46,18 @@ Graphics::~Graphics(){
 	glDeleteTextures(1, &shadowTexture);
 	glDeleteFramebuffers(1, &framebuffer);
 
-	glDeleteProgram(quadProgram);
+	/*glDeleteProgram(quadProgram);
 	glDeleteBuffers(1, &quadBuffer);
-	glDeleteVertexArrays(1, &quadVAO);
+	glDeleteVertexArrays(1, &quadVAO);*/
 
 	glDeleteTextures(1, &whiteTex);
 	glDeleteTextures(1, &blueTex);
 
 	glDeleteProgram(mainProg);
-	for(const auto & i:models){
+	for(const auto i:models){
 		delete i;
 	}
-	//delete meshes after models, reasoning is so that models don't have dangling pointers
-	deleteMeshes();
+	deleteFiles();
 
 	glfwDestroyWindow(window);
     glfwTerminate();
@@ -139,7 +140,7 @@ void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(
 		std::cout << "Frame buffer dun goofed "<<glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
 }
 
-void Graphics::setupQuadProg(string v, string f){
+/*void Graphics::setupQuadProg(string v, string f){
 	quadProgram = genShaders(v,f);	glUseProgram(quadProgram);	glUniform1f(glGetUniformLocation(quadProgram, "passTexture"), 0);
 	static const GLfloat quad[] = {
 		-1.0f, -1.0f, 0.0f,
@@ -159,7 +160,7 @@ void Graphics::setupQuadProg(string v, string f){
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
-}
+}*/
 
 void Graphics::setLight(){
 	glViewport(0,0,800,800);
@@ -180,7 +181,7 @@ void Graphics::setLight(){
 			glm::mat4 depthMVP = depthProjectionMatrix*moveMatrix*i->getModelMatrix();
 			glUniformMatrix4fv(depthMVPpos,1, GL_FALSE, glm::value_ptr(depthMVP));
 			glBindVertexArray(i->getMesh()->vao);
-			glDrawElements(GL_TRIANGLES, i->getMesh()->getSize(), GL_UNSIGNED_INT,0);
+			glDrawElements(GL_TRIANGLES, i->getMesh()->getNbIndices(), GL_UNSIGNED_INT,0);
 		}
 	}
 }
@@ -215,84 +216,118 @@ void Graphics::update(){
 		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player->getCameraMatrix()));
 		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, glm::value_ptr(matrix));
 		glUniformMatrix4fv(modelPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
-		glUniform1f(toggleTextures, i->getMesh()->useTextures());
+		glUniform1f(toggleTextures, i->getMesh()->getFile()->useTextures());
 		glBindVertexArray(i->getMesh()->vao);
-
+		//loop through all the material calls
 		for(auto mats = i->getMesh()->getMatCalls().begin(); mats != i->getMesh()->getMatCalls().end(); ++mats){
-			const Material * currMat = i->getMesh()->matData(mats->first);
-			glUniform3f(ambColor, currMat->Ka[0], currMat->Ka[1], currMat->Ka[2]);
-			glUniform3f(difColor, currMat->Kd[0], currMat->Kd[1], currMat->Kd[2]);
-			glUniform3f(specColor, currMat->Ks[0], currMat->Ks[1], currMat->Ks[2]);
-			glUniform1f(shininess, currMat->Ns);
+			//bind the material data
+			{
+				const Material * currMat = i->getMesh()->getFile()->getMaterial(mats->first);
+				glUniform3f(ambColor, currMat->Ka[0], currMat->Ka[1], currMat->Ka[2]);
+				glUniform3f(difColor, currMat->Kd[0], currMat->Kd[1], currMat->Kd[2]);
+				glUniform3f(specColor, currMat->Ks[0], currMat->Ks[1], currMat->Ks[2]);
+				glUniform1f(shininess, currMat->Ns);
 
-			//No ambient texture? use diffuse instead
-			glActiveTexture(GL_TEXTURE0);
-			if(currMat->map_Ka !=0)
-				glBindTexture(GL_TEXTURE_2D, currMat->map_Ka);
+				//No ambient texture? use diffuse instead
+				glActiveTexture(GL_TEXTURE0);
+				if(currMat->map_Ka !=0)
+					glBindTexture(GL_TEXTURE_2D, currMat->map_Ka);
 
-			else if(currMat->map_Kd !=0)
-				glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
+				else if(currMat->map_Kd !=0)
+					glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
 
-			else
-				glBindTexture(GL_TEXTURE_2D, whiteTex);
+				else
+					glBindTexture(GL_TEXTURE_2D, whiteTex);
 
-			glActiveTexture(GL_TEXTURE1);
-			if(currMat->map_Kd !=0)
-				glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
-			else
-				glBindTexture(GL_TEXTURE_2D, whiteTex);
+				glActiveTexture(GL_TEXTURE1);
+				if(currMat->map_Kd !=0)
+					glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
+				else
+					glBindTexture(GL_TEXTURE_2D, whiteTex);
 
-			//no textures? use white instead
-			glActiveTexture(GL_TEXTURE3);
-			if(currMat->map_d !=0)
-				glBindTexture(GL_TEXTURE_2D, currMat->map_d);
+				//no textures? use white instead
+				glActiveTexture(GL_TEXTURE3);
+				if(currMat->map_d !=0)
+					glBindTexture(GL_TEXTURE_2D, currMat->map_d);
+				else{
+					glBindTexture(GL_TEXTURE_2D, whiteTex);
+				}
+				//no bump map? use 127,255,127 instead (0,1,0)
+				glActiveTexture(GL_TEXTURE4);
+				if(currMat->map_bump!=0){
+					glBindTexture(GL_TEXTURE_2D, currMat->map_bump);
+				}
+				else
+					glBindTexture(GL_TEXTURE_2D, blueTex);
+			}
+			//std::cout<< mats->second << " ";
+			if(mats+1 != i->getMesh()->getMatCalls().end()){
+				glDrawElements(GL_TRIANGLES, (mats+1)->second - mats->second, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) *mats->second));
+			//	std::cout<<(mats+1)->second - mats->second<< " ";
+			}
 			else{
-				glBindTexture(GL_TEXTURE_2D, whiteTex);
-			}
-			//no bump map? use 127,255,127 instead (0,1,0)
-			glActiveTexture(GL_TEXTURE4);
-			if(currMat->map_bump!=0){
-				glBindTexture(GL_TEXTURE_2D, currMat->map_bump);
-			}
-			else
-				glBindTexture(GL_TEXTURE_2D, blueTex);
-
-			if(mats+1 == i->getMesh()->getMatCalls().end()){
-				glDrawElements(GL_TRIANGLES, i->getMesh()->getSize() -mats->second*3, GL_UNSIGNED_INT,(void*)(sizeof(unsigned int) *mats->second*3));
-			}
-			else{
-				glDrawElements(GL_TRIANGLES, (mats+1)->second*3 - mats->second*3, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) *mats->second*3));
+				glDrawElements(GL_TRIANGLES, i->getMesh()->getNbIndices() -mats->second, GL_UNSIGNED_INT,(void*)(sizeof(unsigned int) *mats->second));
+			//	std::cout<<i->getMesh()->getNbIndices()<<std::endl<<std::endl;
 			}
 		}
 	}
 
-	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	/*glBindVertexArray(quadVAO);
-	//glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glUseProgram(quadProgram);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
-	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	for(int loop = 0; loop < 6; loop++){
-
-	}
-
-		glUniform1f(glGetUniformLocation(quadProgram, "screen"), loop);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X+loop, shadowTexture,0);
-		glViewport(100*loop, 0, 100, 100);
-		glDrawArrays(GL_TRIANGLES,0,6);
-	}*/
 
 	glfwPollEvents();
 	glfwSwapBuffers(window);
 }
+/*void Graphics::addStaticModel(string name){
+	const ObjFile * file = loadFile(name);
+	std::cout<<glfwGetTime()<<std::endl;
+	for(const auto & i:file->getMeshes()){
+		Model * mod = new Model(i.second);
+		models.push_back(mod);
+		mod->setScale(0.01,0.01,0.01);
+		//std::cout<<i.first<<std::endl;
+	}
+}*/
+void Graphics::addDynamicModel(string name, Physics & physics){
+	const ObjFile * file = loadFile(name);
+	map<string, Model*> newmods;
+	for(const auto & i:file->getMeshes()){
+		Model * mod = new Model(i.second);
+		newmods.emplace(i.first, mod);
+		models.push_back(mod);
+		//std::cout<<i.first<<std::endl;
+	}
+	//Model * mod =  new Model(loadMesh(name));
+	//models.emplace_back(mods);
 
-Model * Graphics::addModel(string name){
-	Model * mod =  new Model(loadMesh(name));
-	models.push_back(mod);
-	return mod;
+	name= name.substr(0, name.find_last_of('.')) + ".xml";
+
+	PxCollection* bufferCollection = physics.getPhysics()->createCollection();
+	PxCollection* sceneCollection = physics.getPhysics()->createCollection();
+	PxStringTable*  stringTable = &PxStringTableExt::createStringTable(physics.getFoundation()->getAllocator()); //stores names?
+	/*PxUserReferences* externalRefs = NULL;// pxPhysics->createUserReferences();//we assume there are no external refs
+	PxUserReferences * userRefs =  NULL;//  pxPhysics->createUserReferences();//would be used to receive refs and then pass to dependent deserialization calls*/
+
+	physics.loadRepX(name, bufferCollection, sceneCollection, stringTable);
+	physics.getPhysics()->addCollection(*sceneCollection, *physics.getScene()); //add the scene level objects to the PxScene scene.
+
+	int numActors = sceneCollection->getNbObjects();
+	for(int i = 0; i < numActors; ++i){
+		PxSerializable * s = sceneCollection->getObject(i);
+		if(s->getConcreteType() == PxConcreteType::eRIGID_DYNAMIC){
+			PxRigidDynamic * r = static_cast<PxRigidDynamic *>(s);
+			//std::cout << r->getName()<<std::endl;
+			//std::cout<<file->getMeshes().find(r->getName())->second<<std::endl;
+			if(newmods.find(r->getName()) != newmods.end()){
+				r->userData = newmods[r->getName()];
+				newmods[r->getName()]->setOrigin(r->getGlobalPose().p);
+			}
+			//r->userData = file->getMeshes().find(r->getName())->second;
+			//file->getMeshes().find(r->getName())->second.setOrigin(r->getGlobalPose().p);
+		}
+	}
+
+	bufferCollection->release();
+	sceneCollection->release();
+	stringTable->release();
 }
 
 bool Graphics::isOpen() const{

@@ -19,4 +19,6 @@ public:
 	PxScene * getScene();
 	PxPhysics * getPhysics();
 	PxControllerManager * getControllerManager();
+	PxFoundation * getFoundation();
+	void loadRepX(string, PxCollection *, PxCollection *, PxStringTable *);
 };

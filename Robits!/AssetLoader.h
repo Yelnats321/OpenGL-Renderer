@@ -1,8 +1,9 @@
 #pragma once
 
 class Mesh;
+class ObjFile;
 
-void deleteMeshes();
+void deleteFiles();
 GLuint loadTexture(string,bool);
-const Mesh * loadMesh(string);
+const ObjFile * loadFile(string);
 GLuint genShaders(string, string);

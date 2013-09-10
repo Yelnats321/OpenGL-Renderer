@@ -9,20 +9,21 @@ extern "C"{
 
 #include "Material.h"
 #include "Mesh.h"
+#include "ObjFile.h"
 
 map<string, GLuint> textures;
 
-map<string, Mesh *> meshes;
+map<string, ObjFile *> files;
+
+void deleteFiles(){
+	for(const auto & i:files){
+		delete i.second;
+	}	files.clear();
+}
+
 //delte meshes will be called at the end of operation. there is no need for delete textures because each mesh can delete it's own textures
 //if two meshes share a texture, it is fine since the data has already been deleted (maybe)
 //possibly write mesh and texture manager
-void deleteMeshes(){
-	for(const auto & i : meshes){
-		delete i.second;
-	}
-	meshes.clear();
-}
-
 GLuint genShaders(string vert, string frag){
 	std::ifstream file;
 
@@ -129,7 +130,7 @@ map<string, Material *> loadMaterialLibrary(string name){
 		std::getline(file, buf);
 		line.emplace_back(std::move(buf));
 	}
-
+	file.close();
 	Material * currMat;
 
 	for(const auto & itr:line){
@@ -226,7 +227,7 @@ map<string, Material *> loadMaterialLibrary(string name){
 		}
 	}
 
-	return mats;
+	return std::move(mats);
 }
 
 struct GLuintData{
@@ -237,17 +238,12 @@ struct GLuintData{
 	}
 };
 
-const Mesh * loadMesh(string name){
-	if(meshes.find(name) != meshes.end()){
-		std::cout<<"Retrieved mesh " + name <<std::endl;
-		return meshes.find(name)->second;
-	}
-	std::cout<<"Loading file " + name<<std::endl;
+bool parseObj(string name, vector<glm::vec3> & vertices, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<GLuintData> & pointData, vector<std::pair<string, int> > & matCalls, map<string, Material *> & matLib, vector<std::pair<string, int> > & groups){	std::cout<<"Loading file " + name<<std::endl;
 	std::ifstream file;
 	file.open(name);
 	if(file.fail()){
 		std::cout << "Error reading file "+ name << std::endl;;
-		return nullptr;
+		return false;
 	}
 	vector<string> line;
 	string buf;
@@ -255,14 +251,7 @@ const Mesh * loadMesh(string name){
 		std::getline(file, buf);
 		line.emplace_back(std::move(buf));
 	}
-
-	vector<glm::vec3> vertices;
-	vector<glm::vec2> textures;
-	vector<glm::vec3> normals;
-
-	vector<GLuintData> pointData;
-	vector<std::pair<std::string, int> > materials;
-	map<string, Material *>matLib;
+	file.close();
 
 	for(const auto & itr : line){
 		string key;
@@ -286,6 +275,15 @@ const Mesh * loadMesh(string name){
 				normals.emplace_back(x,y,z);
 		}
 
+		else if(key == "g"){
+			string groupName;
+			ss>>groupName;
+			if(groups.size() > 0 && groups[groups.size()-1].second == pointData.size())
+				groups[groups.size()-1].first = std::move(groupName);
+			else
+				groups.emplace_back(std::move(groupName), pointData.size());
+		}
+
 		else if(key == "mtllib"){
 			string matName;
 			ss >> matName;
@@ -297,7 +295,10 @@ const Mesh * loadMesh(string name){
 		else if(key == "usemtl"){
 			string mtlName;
 			ss >> mtlName;
-			materials.emplace_back(std::move(mtlName), pointData.size()/3);
+			if(matCalls.size() > 0 && matCalls[matCalls.size()-1].second == pointData.size())
+				matCalls[matCalls.size()-1].first= std::move(mtlName);
+			else
+				matCalls.emplace_back(std::move(mtlName), pointData.size());
 		}
 		//faces
 		else if(key == "f"){
@@ -339,6 +340,77 @@ const Mesh * loadMesh(string name){
 			}
 		}
 	}
+	return true;
+}
+
+void calculateTangents(vector<glm::vec3> & vertices, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<GLuintData> & pointData, vector<glm::vec3>& tangents, vector<glm::vec3> & bitangents){
+	for(int i = 0; i <pointData.size(); i+=3){
+		//std::cout<<"triangle "<<i/3<<std::endl;
+		glm::vec3 & v0 = vertices[pointData[i].x-1];
+		glm::vec3 & v1 = vertices[pointData[i+1].x-1];
+		glm::vec3 & v2 = vertices[pointData[i+2].x-1];
+
+		glm::vec2 & uv0 = textures[pointData[i].y-1];
+		glm::vec2 & uv1 = textures[pointData[i+1].y-1];
+		glm::vec2 & uv2 = textures[pointData[i+2].y-1];
+
+		glm::vec3 deltaPos1 = v1-v0;
+		glm::vec3 deltaPos2 = v2-v0;
+
+		glm::vec2 deltaUV1 = uv1-uv0;
+		glm::vec2 deltaUV2 = uv2-uv0;
+
+		float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+		glm::vec3 tangent = (deltaPos1 * deltaUV2.y   - deltaPos2 * deltaUV1.y)*r;
+		glm::vec3 bitangent = (deltaPos2 * deltaUV1.x   - deltaPos1 * deltaUV2.x)*r;
+
+		for(int j =0; j < 3; j++){
+			tangents.emplace_back(tangent);
+			bitangents.emplace_back(bitangent);
+		}
+	}
+	for(int i = 0; i < pointData.size(); i++){
+		glm::vec3 & n = normals[pointData[i].z-1];
+		glm::vec3 & t = tangents[i];
+		glm::vec3 & b = bitangents[i];
+
+		// Gram-Schmidt orthogonalize
+		t = glm::normalize(t - n * glm::dot(n, t));
+
+		// Calculate handedness
+		if (glm::dot(glm::cross(n, t), b) < 0.0f){
+			t = t * -1.0f;
+		}
+	}
+}
+
+	//TODO: FIX MATERIALS!!!!!!!!!!!
+	//TODO: FIX MATERIALS!!!!!!!!!!!
+	//TODO: FIX MATERIALS!!!!!!!!!!!
+	//TODO: FIX MATERIALS!!!!!!!!!!!
+	//TODO: FIX MATERIALS!!!!!!!!!!!
+//the issue is that the material calls are based around, oh i don't know, the overall position in the mesh
+//this is a carry over from when a obj had only one file
+//to fix this you must have a mat call vector for each mesh, unlike now. fix that cowboi uppp
+const ObjFile * loadFile(string name){
+	if(files.find(name) != files.end()){
+		std::cout<<"Retrieved file " + name <<std::endl;
+		return files.find(name)->second;
+	}
+
+	vector<glm::vec3> vertices;
+	vector<glm::vec2> textures;
+	vector<glm::vec3> normals;
+
+	vector<GLuintData> pointData;
+	vector<std::pair<string, int> > masterMatCalls;
+	map<string, Material *>matLib;
+	vector<std::pair<string, int> > groups;
+	if(!parseObj(name, vertices, textures, normals, pointData, masterMatCalls, matLib, groups))
+		return nullptr;
+
+	/*for(const auto & i : groups)
+		std::cout<<i.first << " " <<i.second<<std::endl;*/
 	bool useTextures = false, useNormals =false;
 
 	if(pointData[0].y != 0)
@@ -350,56 +422,26 @@ const Mesh * loadMesh(string name){
 	//DON'T FORGET THE SUBTRACTIOLI
 	//OBJ COUNTS FROM 1 NOT 0
 
-	int size = pointData.size();
 
 	vector<glm::vec3> tangents;
 	vector<glm::vec3> bitangents;
 	if(useNormals && useTextures){
-		for(int i = 0; i <size; i+=3){
-			//std::cout<<"triangle "<<i/3<<std::endl;
-			glm::vec3 & v0 = vertices[pointData[i].x-1];
-			glm::vec3 & v1 = vertices[pointData[i+1].x-1];
-			glm::vec3 & v2 = vertices[pointData[i+2].x-1];
-
-			glm::vec2 & uv0 = textures[pointData[i].y-1];
-			glm::vec2 & uv1 = textures[pointData[i+1].y-1];
-			glm::vec2 & uv2 = textures[pointData[i+2].y-1];
-
-			glm::vec3 deltaPos1 = v1-v0;
-			glm::vec3 deltaPos2 = v2-v0;
-
-			glm::vec2 deltaUV1 = uv1-uv0;
-			glm::vec2 deltaUV2 = uv2-uv0;
-
-			float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-			glm::vec3 tangent = (deltaPos1 * deltaUV2.y   - deltaPos2 * deltaUV1.y)*r;
-			glm::vec3 bitangent = (deltaPos2 * deltaUV1.x   - deltaPos1 * deltaUV2.x)*r;			for(int j =0; j < 3; j++){				tangents.emplace_back(tangent);				bitangents.emplace_back(bitangent);			}		}
-		for(int i = 0; i < pointData.size(); i++){
-			glm::vec3 & n = normals[pointData[i].z-1];
-			glm::vec3 & t = tangents[i];
-			glm::vec3 & b = bitangents[i];
-
-			// Gram-Schmidt orthogonalize
-			t = glm::normalize(t - n * glm::dot(n, t));
-
-			// Calculate handedness
-			if (glm::dot(glm::cross(n, t), b) < 0.0f){
-				t = t * -1.0f;
-			}
-		}
+		calculateTangents(vertices, textures, normals, pointData, tangents, bitangents);
 	}
-	vector<GLuint> elements(size);
-	for(int i = 0; i < size; ++i)
+
+	int nbOfPoints = pointData.size();
+	vector<GLuint> elements(nbOfPoints);
+	for(int i = 0; i < nbOfPoints; ++i)
 		elements[i] = i;
 
 	std::cout << glfwGetTime() << std::endl;
 	//Assume all elements are unique, until you check out if they aren't
-	for(int i =0; i<size; ++i){
+	for(int i =0; i<nbOfPoints; ++i){
 		/*std::cout << tangents[i].x << " " <<tangents[i].y<<" "<<tangents[i].z<<std::endl;
 		std::cout << bitangents[i].x << " " <<bitangents[i].y<<" "<<bitangents[i].z<<std::endl;
 		std::cout<< normals[pointData[i].x-1].z<< " "<< normals[pointData[i].z-1].y<< " "<< normals[pointData[i].z-1].z<< std::endl<<std::endl;*/
 		if(elements[i] == i){
-			for(int j = i+1; j <size; ++j){
+			for(int j = i+1; j <nbOfPoints; ++j){
 				if(pointData[i] == pointData[j]){
 					if(useTextures && useNormals){
 						tangents[i] += tangents[j];
@@ -414,86 +456,105 @@ const Mesh * loadMesh(string name){
 	//these are just the elements, since they kept their position as their value, they have to be compressed
 	vector<GLuint> sortElem(elements);
 	std::sort(sortElem.begin(), sortElem.end());
-	sortElem.resize(std::distance(sortElem.begin(), std::unique(sortElem.begin(), sortElem.end())));
+	sortElem.erase(std::unique(sortElem.begin(), sortElem.end()), sortElem.end());
 
 	std::cout << glfwGetTime() << std::endl;
-	int elemSize = sortElem.size();
 
 	int blockSize = 3+(useTextures?2:0) + (useNormals?3:0);
 	if(blockSize == 8)
 		blockSize = 14;
-
-	std::vector<float> data(elemSize * blockSize, 0);
-	for(int i = 0; i < elemSize; ++i){
-		GLuint sElemPos = sortElem[i];
-		int dataPos = i*blockSize;
+	int sortedElemSize = sortElem.size();
+	vector<float> data(sortedElemSize * blockSize, 0);
+	std::cout<<nbOfPoints << " " <<sortedElemSize << std::endl<<std::endl<<std::endl;
+	for(int k =0; k < sortedElemSize; ++k){
+		GLuint pos = sortElem[k];
+		//std::cout<<pos<<std::endl;
+		int dataPos = k*blockSize;
 		//pack all the elements that are unique
 		//&vertices[pointData[elemPos]-1][0], &vertices[pointData[elemPos]][0],
 		//std::copy(&vertices[pointData[elemPos]-1], &vertices[pointData[elemPos]], &data[dataPos]);
-		data[dataPos] = vertices[pointData[sElemPos].x-1].x;
-		data[dataPos+1] = vertices[pointData[sElemPos].x-1].y;
-		data[dataPos+2] = vertices[pointData[sElemPos].x-1].z;
+		data[dataPos] = vertices[pointData[pos].x-1].x;
+		data[dataPos+1] = vertices[pointData[pos].x-1].y;
+		data[dataPos+2] = vertices[pointData[pos].x-1].z;
 		if(useTextures){
-			data[dataPos+3] = textures[pointData[sElemPos].y -1].x;
-			data[dataPos+4] = textures[pointData[sElemPos].y -1].y;
+			data[dataPos+3] = textures[pointData[pos].y -1].x;
+			data[dataPos+4] = textures[pointData[pos].y -1].y;
 			dataPos+=2;
 		}
 
 		if(useNormals){
 			//std::copy(normals.begin() + (pointData[elemPos+2]-1)*3, normals.begin()+(pointData[elemPos+2]-1)*3+3, data.begin()+dataPos+5);
 			//std::copy(&normals[(pointData[elemPos+2]-1)*3], &normals[(pointData[elemPos+2]-1)*3+3], &data[dataPos+5]);
-			data[dataPos+3] = normals[pointData[sElemPos].z-1].x;
-			data[dataPos+4] = normals[pointData[sElemPos].z-1].y;
-			data[dataPos+5] = normals[pointData[sElemPos].z-1].z;
+			data[dataPos+3] = normals[pointData[pos].z-1].x;
+			data[dataPos+4] = normals[pointData[pos].z-1].y;
+			data[dataPos+5] = normals[pointData[pos].z-1].z;
 		}
 
 		if(useTextures && useNormals){
-			data[dataPos+6] = tangents[sElemPos].x;
-			data[dataPos+7] = tangents[sElemPos].y;
-			data[dataPos+8] = tangents[sElemPos].z;
-			data[dataPos+ 9] = bitangents[sElemPos].x;
-			data[dataPos+10] = bitangents[sElemPos].y;
-			data[dataPos+11] = bitangents[sElemPos].z;
+			data[dataPos+6] = tangents[pos].x;
+			data[dataPos+7] = tangents[pos].y;
+			data[dataPos+8] = tangents[pos].z;
+			data[dataPos+ 9] = bitangents[pos].x;
+			data[dataPos+10] = bitangents[pos].y;
+			data[dataPos+11] = bitangents[pos].z;
 		}
 
 		//point elements to their true location, rather than their previous pos location
-		if(i != sElemPos){
-			std::replace(elements.begin(), elements.end(), sElemPos, (GLuint)i);
+		if(k != pos){
+			std::replace(elements.begin(), elements.end(), pos, (GLuint)k);
 		}
 	}
 	std::cout << glfwGetTime() << std::endl;
-	std::cout << std::endl << elemSize << " " <<elements.size() << std::endl;
-	GLuint vao = 0, vbo = 0, ebo =0;
 
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
+	GLuint vbo = 0;
 	glGenBuffers(1, &vbo);
 	glBindBuffer( GL_ARRAY_BUFFER, vbo );
 	glBufferData( GL_ARRAY_BUFFER, sizeof(float) * data.size(), &data[0], GL_STATIC_DRAW );
+	ObjFile * objFile = new ObjFile(vbo, useTextures, std::move(matLib));
+	files.emplace(name, objFile);
 
+	for(int j = 0; j<groups.size(); ++j){
+		const int currPos = groups[j].second;
+		int nbTrianglePoints;
+		if(j+1 == groups.size())
+			nbTrianglePoints = nbOfPoints - currPos;
+		else
+			nbTrianglePoints = groups[j+1].second - currPos;
 
-	glGenBuffers(1, &ebo);
-	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData( GL_ELEMENT_ARRAY_BUFFER, elements.size() * sizeof(GLuint), &elements[0], GL_STATIC_DRAW);
+		std::vector<std::pair<string, int>> matCalls;
+		for(int mat = 0; mat < masterMatCalls.size(); ++mat){
+			//if this material call is the less than or equal to the group start AND the next one is too big for the group start OR the next one is the end
+			if(masterMatCalls[mat].second <= currPos && (mat+1==masterMatCalls.size() ||masterMatCalls[mat+1].second > currPos))
+				matCalls.emplace_back(masterMatCalls[mat].first, 0);
+			else if(masterMatCalls[mat].second > currPos && masterMatCalls[mat].second < currPos + nbTrianglePoints)
+				matCalls.emplace_back(masterMatCalls[mat].first, masterMatCalls[mat].second-currPos);
+		}
+		GLuint ebo = 0, vao =0;
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), 0);
-	glEnableVertexAttribArray(0);
-	if(useTextures){
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*3));
-		glEnableVertexAttribArray(1);
+		glGenBuffers(1, &ebo);
+		glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ebo);
+		glBufferData( GL_ELEMENT_ARRAY_BUFFER, nbTrianglePoints * sizeof(GLuint), &elements[currPos], GL_STATIC_DRAW);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), 0);
+		glEnableVertexAttribArray(0);
+		if(useTextures){
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*3));
+			glEnableVertexAttribArray(1);
+		}
+		if(useNormals){
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*(useTextures?5:3)));
+			glEnableVertexAttribArray(2);
+		}
+		if(useNormals && useTextures){
+			glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*8));
+			glEnableVertexAttribArray(3);
+			glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*11));
+			glEnableVertexAttribArray(4);
+		}
+		objFile->addMesh(groups[j].first, new Mesh(objFile, vao, ebo, nbTrianglePoints, std::move(matCalls)));
 	}
-	if(useNormals){
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*(useTextures?5:3)));
-		glEnableVertexAttribArray(2);
-	}
-	if(useNormals && useTextures){
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*8));
-		glEnableVertexAttribArray(3);
-		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*11));
-		glEnableVertexAttribArray(4);
-	}
-	//Mesh mesh(vao, vbo, ebo, elements.size(), std::move(materials), std::move(matLib));
-	meshes.emplace(name, new Mesh(vao, vbo, ebo, elements.size(), useTextures, std::move(materials), std::move(matLib)));
-	return meshes.find(name)->second; 
+
+	return objFile; 
 }

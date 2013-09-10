@@ -3,6 +3,7 @@
 #include "Graphics.h"
 #include "Settings.h"
 #include "Physics.h"
+#include "PhysXGLMHelper.h"
 
 Player::Player(Graphics & g, Physics & p):graphics(g), physics(p), savedPos(0,1,3), camPosition(0.f, 0.3f, 0.f){
 	horizontalAngle =0.f;
@@ -15,11 +16,11 @@ Player::Player(Graphics & g, Physics & p):graphics(g), physics(p), savedPos(0,1,
 	PxCapsuleControllerDesc desc;
 	desc.height = 1.25;
 	desc.radius = 0.25;
-	desc.position = PxExtendedVec3(0,10,0);
+	desc.position = PxExtendedVec3(0,5,0);
 	desc.material = physMat;
 	desc.upDirection = PxVec3(0,1,0);
 	//desc.slopeLimit = cosf(M_PI/4);
-	desc.density = 1;
+	desc.density = 10;
 	desc.stepOffset = 0.5;
 	controller = physics.getControllerManager()->createController(*physics.getPhysics(), physics.getScene(), desc);
 	std::cout <<controller->getPosition().x<< " START POS SDASDS "<< controller->getPosition().x - controller->getFootPosition().x - controller->getContactOffset()<<std::endl;
@@ -72,9 +73,8 @@ void Player::update(std::array<bool, 8> & keys, float x, float y, float deltaTim
 	glm::vec3 up = glm::cross( right, direction );
 	PxExtendedVec3 physPos = controller->getPosition();
 	//PxVec3 physPos = physBody->getGlobalPose().p;
-	camPosition.x = physPos.x;
-	camPosition.y = physPos.y+0.875;
-	camPosition.z = physPos.z;
+	camPosition = ptog(physPos);
+	camPosition.y += 0.875;
 
 	float forw = 0, righ = 0;
 	// Move forward
@@ -150,6 +150,7 @@ void Player::update(std::array<bool, 8> & keys, float x, float y, float deltaTim
 	if(keys[6]){
 		savedPos = camPosition;
 		graphics.setLight();
+		std::cout<<camPosition.x<< " " << camPosition.y<< " " <<camPosition.z<<std::endl;
 	}
 
 	camMatrix = glm::lookAt(

@@ -1,34 +1,24 @@
 #include "stdafx.h"
 #include "Mesh.h"
-#include "Material.h"
 
-Mesh::Mesh(GLuint a, GLuint b, GLuint e, int siz, bool tex, vector<std::pair<string, int> > && m, map<string, Material *> && mm)
-	:vao(a), vbo(b), ebo(e),size(siz), textures(tex), materials(std::move(m)), matMap(std::move(mm)){
+Mesh::Mesh(const ObjFile * f, GLuint a, GLuint e, int siz,vector<std::pair<string, int> > && m)
+	:file(f),vao(a), ebo(e), nbIndices(siz),matCalls(std::move(m)){
 }
 
 Mesh::~Mesh(){
 	//Don't forget to delete all the textures and materials themselves
-	for(const auto & i:matMap){
+	/*for(const auto & i:matMap){
 		glDeleteTextures(1,&i.second->map_Ka);
 		glDeleteTextures(1,&i.second->map_Kd);
 		glDeleteTextures(1,&i.second->map_d);
 		glDeleteTextures(1,&i.second->map_bump);
 		delete i.second;
-	}
-	glDeleteBuffers(1, &vbo);
-	glDeleteBuffers(1, &ebo);
+	}*/
 	glDeleteVertexArrays(1, &vao);
+	glDeleteBuffers(1, &ebo);
 }
 
-const vector<std::pair<string, int>> & Mesh::getMatCalls() const{
-	return materials;
-}
-
-const Material * Mesh::matData(string name)const{
-	if(matMap.find(name) != matMap.end())
-		return matMap.find(name)->second;
-	return nullptr;
-}
-
-const int Mesh::getSize() const{return size;}
-const bool Mesh::useTextures() const{return textures;}
+//size is number of TRIANGLES POINTS IE INDICES
+const int Mesh::getNbIndices() const{return nbIndices;}
+const ObjFile * Mesh::getFile() const{return file;}
+const vector<std::pair<string,int>> & Mesh::getMatCalls() const{return matCalls;}

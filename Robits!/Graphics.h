@@ -1,6 +1,7 @@
 #pragma once
 class Model;
 class Player;
+class Physics;
 
 class Graphics{
 	vector<Model *> models;
@@ -8,7 +9,7 @@ class Graphics{
 	GLuint mainProg;
 
 	//Texture shit
-	GLuint quadBuffer, quadProgram, quadVAO;
+	//GLuint quadBuffer, quadProgram, quadVAO;
 	GLuint framebuffer, renderbuffer, shadowProgram, shadowTexture;
 	glm::mat4 sideViews[6];
 
@@ -21,13 +22,14 @@ class Graphics{
 	GLFWwindow * window;
 	void setupMainProg(string, string);
 	void setupShadowProg(string, string);
-	void setupQuadProg(string, string);
+	//void setupQuadProg(string, string);
 public:
 	Graphics();
 	~Graphics();
 	void update();
 	bool isOpen() const;
-	Model * addModel(string);
+	//void addStaticModel(string);
+	void addDynamicModel(string, Physics &);
 	GLFWwindow * getWindow() const;
 	void setPlayer(Player *);
 	void setLight();

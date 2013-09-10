@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Physics.h"
 
+#include "Model.h"
+
 Physics::Physics(){
 	static PxDefaultErrorCallback defaultErrorCallback;
 	static PxDefaultAllocator defaultAllocatorCallback;
@@ -18,6 +20,7 @@ Physics::Physics(){
 	}
 	if(!sceneDesc.filterShader)
 		sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+	sceneDesc.flags |= PxSceneFlag::eENABLE_ACTIVETRANSFORMS;
 	pxScene = pxPhysics->createScene(sceneDesc);
 
 	/*floorMat = pxPhysics->createMaterial(0.5, 0.5, 0.1);
@@ -27,28 +30,6 @@ Physics::Physics(){
 	floorRigid->setName("floor");
 	pxScene->addActor(*floorRigid);*/
 
-	PxDefaultFileInputData data("assets/test1.xml");
-	PxCollection* bufferCollection = pxPhysics->createCollection();
-	PxCollection* sceneCollection = pxPhysics->createCollection();
-	PxStringTable*  stringTable = &PxStringTableExt::createStringTable(pxFoundation->getAllocator()); //stores names?
-	/*PxUserReferences* externalRefs = NULL;// pxPhysics->createUserReferences();//we assume there are no external refs
-	PxUserReferences * userRefs =  NULL;//  pxPhysics->createUserReferences();//would be used to receive refs and then pass to dependent deserialization calls*/
-
-	repx::deserializeFromRepX(data, *pxPhysics, *pxCooking, stringTable, NULL, *bufferCollection, *sceneCollection, NULL);
-	pxPhysics->addCollection(*sceneCollection, *pxScene); //add the scene level objects to the PxScene scene.
-
-	int numActors = sceneCollection->getNbObjects();
-	for(int i = 0; i < numActors; ++i){
-		PxSerializable * s = sceneCollection->getObject(i);
-		if(s->getConcreteType() == PxConcreteType::eRIGID_STATIC){
-			PxActor * r = static_cast<PxActor *>(s);
-			std::cout << r->getName()<<std::endl;
-		}
-	}
-
-	bufferCollection->release();
-	sceneCollection->release();
-	stringTable->release();
 }
 
 Physics::~Physics(){
@@ -64,11 +45,30 @@ Physics::~Physics(){
 	pxFoundation->release();
 }
 
+void Physics::loadRepX(string name, PxCollection * buffer, PxCollection * scene, PxStringTable * table){
+	PxDefaultFileInputData data(name.c_str());
+
+	repx::deserializeFromRepX(data, *pxPhysics, *pxCooking, table, NULL, *buffer, *scene, NULL);
+}
+
 void Physics::update(float deltaTime){
 	pxScene->simulate(deltaTime);
 	pxScene->fetchResults(true);
+
+	PxU32 nbActiveTransforms;
+	PxActiveTransform* activeTransforms = pxScene->getActiveTransforms(nbActiveTransforms);
+	// update each render object with the new transform
+	//std::cout << nbActiveTransforms<<std::endl;
+	for (PxU32 i=0; i < nbActiveTransforms; ++i)
+	{
+		if(activeTransforms[i].userData != NULL){
+			Model* model = static_cast<Model*>(activeTransforms[i].userData);
+			model->setTransform(activeTransforms[i].actor2World);
+		}
+	}
 }
 
 PxPhysics * Physics::getPhysics(){return pxPhysics;}
 PxScene * Physics::getScene(){return pxScene;}
 PxControllerManager * Physics::getControllerManager(){return pxControllerManager;}
+PxFoundation * Physics::getFoundation(){return pxFoundation;}
