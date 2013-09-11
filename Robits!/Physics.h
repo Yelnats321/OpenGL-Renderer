@@ -10,6 +10,8 @@ class Physics{
 	PxCooking * pxCooking;
 	PxControllerManager * pxControllerManager;
 
+	PVD::PvdConnection * pvdConnection;
+
 	/*PxMaterial * floorMat;
 	PxRigidStatic * floorRigid;*/
 public:

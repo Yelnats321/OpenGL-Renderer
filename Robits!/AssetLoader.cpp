@@ -13,17 +13,8 @@ extern "C"{
 
 map<string, GLuint> textures;
 
-map<string, ObjFile *> files;
+map<string, unique_ptr<ObjFile> > files;
 
-void deleteFiles(){
-	for(const auto & i:files){
-		delete i.second;
-	}	files.clear();
-}
-
-//delte meshes will be called at the end of operation. there is no need for delete textures because each mesh can delete it's own textures
-//if two meshes share a texture, it is fine since the data has already been deleted (maybe)
-//possibly write mesh and texture manager
 GLuint genShaders(string vert, string frag){
 	std::ifstream file;
 
@@ -114,9 +105,9 @@ void locationAppend(string origin, string * file){
 }
 
 //remember to extract curr location 
-map<string, Material *> loadMaterialLibrary(string name){
+map<string, Material> loadMaterialLibrary(string name){
 	std::cout << "-Loading the material library " + name<<std::endl;
-	map<string, Material *> mats;
+	map<string, Material> mats;
 
 	std::ifstream file;
 	file.open(name);
@@ -145,11 +136,11 @@ map<string, Material *> loadMaterialLibrary(string name){
 			continue;
 
 		if(key == "newmtl"){	
-			currMat = new Material;
 			string matName;
 			ss >> matName;
 			std::cout << " New material: "+matName<<std::endl;
-			mats.emplace(std::move(matName), currMat);
+			mats.emplace(matName, Material());
+			currMat= &mats.find(matName)->second;
 		}
 
 		else if(key == "Ns" || key == "Ni" || key == "illum" || key == "Tr" || key == "d"){
@@ -165,7 +156,7 @@ map<string, Material *> loadMaterialLibrary(string name){
 
 
 			else if(key == "illum")
-				currMat->illum = value;
+				currMat->illum = (int)value;
 
 			else 
 				currMat->Tr = value;
@@ -238,7 +229,7 @@ struct GLuintData{
 	}
 };
 
-bool parseObj(string name, vector<glm::vec3> & vertices, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<GLuintData> & pointData, vector<std::pair<string, int> > & matCalls, map<string, Material *> & matLib, vector<std::pair<string, int> > & groups){	std::cout<<"Loading file " + name<<std::endl;
+bool parseObj(string name, vector<glm::vec3> & vertices, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<GLuintData> & pointData, vector<std::pair<string, int> > & matCalls, map<string, Material> & matLib, vector<std::pair<string, int> > & groups){	std::cout<<"Loading file " + name<<std::endl;
 	std::ifstream file;
 	file.open(name);
 	if(file.fail()){
@@ -384,18 +375,10 @@ void calculateTangents(vector<glm::vec3> & vertices, vector<glm::vec2> & texture
 	}
 }
 
-	//TODO: FIX MATERIALS!!!!!!!!!!!
-	//TODO: FIX MATERIALS!!!!!!!!!!!
-	//TODO: FIX MATERIALS!!!!!!!!!!!
-	//TODO: FIX MATERIALS!!!!!!!!!!!
-	//TODO: FIX MATERIALS!!!!!!!!!!!
-//the issue is that the material calls are based around, oh i don't know, the overall position in the mesh
-//this is a carry over from when a obj had only one file
-//to fix this you must have a mat call vector for each mesh, unlike now. fix that cowboi uppp
 const ObjFile * loadFile(string name){
 	if(files.find(name) != files.end()){
 		std::cout<<"Retrieved file " + name <<std::endl;
-		return files.find(name)->second;
+		return files.find(name)->second.get();
 	}
 
 	vector<glm::vec3> vertices;
@@ -404,7 +387,7 @@ const ObjFile * loadFile(string name){
 
 	vector<GLuintData> pointData;
 	vector<std::pair<string, int> > masterMatCalls;
-	map<string, Material *>matLib;
+	map<string, Material>matLib;
 	vector<std::pair<string, int> > groups;
 	if(!parseObj(name, vertices, textures, normals, pointData, masterMatCalls, matLib, groups))
 		return nullptr;
@@ -510,8 +493,9 @@ const ObjFile * loadFile(string name){
 	glGenBuffers(1, &vbo);
 	glBindBuffer( GL_ARRAY_BUFFER, vbo );
 	glBufferData( GL_ARRAY_BUFFER, sizeof(float) * data.size(), &data[0], GL_STATIC_DRAW );
-	ObjFile * objFile = new ObjFile(vbo, useTextures, std::move(matLib));
-	files.emplace(name, objFile);
+	//ObjFile * objFile = new ObjFile(vbo, useTextures, std::move(matLib));
+	files.emplace(name,unique_ptr<ObjFile>(new ObjFile(vbo, useTextures, std::move(matLib))));
+	ObjFile * objFile = files[name].get();
 
 	for(int j = 0; j<groups.size(); ++j){
 		const int currPos = groups[j].second;
@@ -553,7 +537,7 @@ const ObjFile * loadFile(string name){
 			glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*11));
 			glEnableVertexAttribArray(4);
 		}
-		objFile->addMesh(groups[j].first, new Mesh(objFile, vao, ebo, nbTrianglePoints, std::move(matCalls)));
+		objFile->addMesh(groups[j].first, unique_ptr<Mesh>(new Mesh(objFile, vao, ebo, nbTrianglePoints, std::move(matCalls))));
 	}
 
 	return objFile; 

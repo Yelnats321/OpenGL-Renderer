@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <memory>
 //openGL
 #include <GL/glew.h>
 #define GLFW_DLL
@@ -18,3 +19,4 @@
 using std::string;
 using std::vector;
 using std::map;
+using std::unique_ptr;

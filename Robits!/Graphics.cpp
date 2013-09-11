@@ -4,10 +4,11 @@
 #include "Material.h"
 #include "AssetLoader.h"
 #include "Settings.h"
-#include "Mesh.h"
 #include "Player.h"
+
 #include "Physics.h"
 #include "ObjFile.h"
+#include "Mesh.h"
 
 Graphics::Graphics(){    glfwInit();
 	glfwWindowHint(GLFW_SAMPLES, 4); 
@@ -54,10 +55,6 @@ Graphics::~Graphics(){
 	glDeleteTextures(1, &blueTex);
 
 	glDeleteProgram(mainProg);
-	for(const auto i:models){
-		delete i;
-	}
-	deleteFiles();
 
 	glfwDestroyWindow(window);
     glfwTerminate();
@@ -276,35 +273,36 @@ void Graphics::update(){
 	glfwPollEvents();
 	glfwSwapBuffers(window);
 }
-/*void Graphics::addStaticModel(string name){
+void Graphics::addStaticModel(string name){
 	const ObjFile * file = loadFile(name);
 	std::cout<<glfwGetTime()<<std::endl;
 	for(const auto & i:file->getMeshes()){
-		Model * mod = new Model(i.second);
-		models.push_back(mod);
-		mod->setScale(0.01,0.01,0.01);
+		//Model * mod = new Model(i.second.get());
+		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
+		models[models.size()-1]->setScale(0.001,0.001,0.001);
 		//std::cout<<i.first<<std::endl;
 	}
-}*/
+}
 void Graphics::addDynamicModel(string name, Physics & physics){
 	const ObjFile * file = loadFile(name);
 	map<string, Model*> newmods;
 	for(const auto & i:file->getMeshes()){
-		Model * mod = new Model(i.second);
-		newmods.emplace(i.first, mod);
-		models.push_back(mod);
+		//Model * mod = new Model(i.second.get());
+		//newmods.emplace(i.first, mod);
+		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
+		newmods.emplace(i.first, models[models.size()-1].get());
 		//std::cout<<i.first<<std::endl;
 	}
 	//Model * mod =  new Model(loadMesh(name));
 	//models.emplace_back(mods);
-
+	
 	name= name.substr(0, name.find_last_of('.')) + ".xml";
 
 	PxCollection* bufferCollection = physics.getPhysics()->createCollection();
 	PxCollection* sceneCollection = physics.getPhysics()->createCollection();
 	PxStringTable*  stringTable = &PxStringTableExt::createStringTable(physics.getFoundation()->getAllocator()); //stores names?
-	/*PxUserReferences* externalRefs = NULL;// pxPhysics->createUserReferences();//we assume there are no external refs
-	PxUserReferences * userRefs =  NULL;//  pxPhysics->createUserReferences();//would be used to receive refs and then pass to dependent deserialization calls*/
+	//PxUserReferences* externalRefs = NULL;// pxPhysics->createUserReferences();//we assume there are no external refs
+	//PxUserReferences * userRefs =  NULL;//  pxPhysics->createUserReferences();//would be used to receive refs and then pass to dependent deserialization calls
 
 	physics.loadRepX(name, bufferCollection, sceneCollection, stringTable);
 	physics.getPhysics()->addCollection(*sceneCollection, *physics.getScene()); //add the scene level objects to the PxScene scene.

@@ -13,9 +13,9 @@ int main(){
 	dragon->setScale(0.001, 0.001, 0.001);*/
 	//graphics.addStaticModel("sponza-x/sponza.obj");
 	std::cout<<glfwGetTime()<<std::endl;
-	graphics.addDynamicModel("assets/boxes.obj", physics);
-	//graphics.addDynamicModel("assets/test1.obj", physics);
-	//graphics.addDynamicModel("assets/circle.obj", physics);
+	//graphics.addDynamicModel("assets/boxes.obj", physics);
+	graphics.addDynamicModel("assets/test1.obj", physics);
+	graphics.addDynamicModel("assets/circle.obj", physics);
 	//floor2->setPosition(0,5,0);
 	double lastTime = glfwGetTime();
 	double acumulator = 0.0;

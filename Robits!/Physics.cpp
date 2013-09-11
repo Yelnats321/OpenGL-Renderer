@@ -3,8 +3,15 @@
 
 #include "Model.h"
 
+class errorCallback:public PxErrorCallback{
+	virtual void reportError (PxErrorCode::Enum code, const char *message, const char *file, int line){
+		std::cout<<"Error error mister robinson!"<<std::endl;
+		std::cout<<message<< " in file " << file<< " at line "<<line<<std::endl;
+	}
+};
+
 Physics::Physics(){
-	static PxDefaultErrorCallback defaultErrorCallback;
+	static errorCallback defaultErrorCallback;
 	static PxDefaultAllocator defaultAllocatorCallback;
 	pxFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, defaultAllocatorCallback, defaultErrorCallback);
 	pxPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *pxFoundation, PxTolerancesScale());
@@ -29,6 +36,16 @@ Physics::Physics(){
 		std::cout << "Can't make floor for some reason ";
 	floorRigid->setName("floor");
 	pxScene->addActor(*floorRigid);*/
+	/*const char*     pvd_host_ip = "127.0.0.1";  // IP of the PC which is running PVD
+	int             port        = 5425;         // TCP port to connect to, where PVD is listening
+	unsigned int    timeout     = 100;          // timeout in milliseconds to wait for PVD to respond,
+	// consoles and remote PCs need a higher timeout.
+	PxVisualDebuggerConnectionFlags connectionFlags = PxVisualDebuggerExt::getAllConnectionFlags();
+
+	// and now try to connect
+	pvdConnection = PxVisualDebuggerExt::createConnection(pxPhysics->getPvdConnectionManager(),
+		pvd_host_ip, port, timeout, connectionFlags);*/
+
 
 }
 
@@ -36,6 +53,8 @@ Physics::~Physics(){
 	/*pxScene->removeActor(*floorRigid);
 	floorRigid->release();
 	floorMat->release();*/
+	if(pvdConnection)
+		pvdConnection->release();
 
 	pxControllerManager->release();
 	pxCooking->release();

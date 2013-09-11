@@ -6,14 +6,6 @@ Mesh::Mesh(const ObjFile * f, GLuint a, GLuint e, int siz,vector<std::pair<strin
 }
 
 Mesh::~Mesh(){
-	//Don't forget to delete all the textures and materials themselves
-	/*for(const auto & i:matMap){
-		glDeleteTextures(1,&i.second->map_Ka);
-		glDeleteTextures(1,&i.second->map_Kd);
-		glDeleteTextures(1,&i.second->map_d);
-		glDeleteTextures(1,&i.second->map_bump);
-		delete i.second;
-	}*/
 	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(1, &ebo);
 }

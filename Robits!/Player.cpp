@@ -6,6 +6,7 @@
 #include "PhysXGLMHelper.h"
 
 Player::Player(Graphics & g, Physics & p):graphics(g), physics(p), savedPos(0,1,3), camPosition(0.f, 0.3f, 0.f){
+	gravity = 0;
 	horizontalAngle =0.f;
 	verticalAngle = -M_PI/2;
 
@@ -20,9 +21,10 @@ Player::Player(Graphics & g, Physics & p):graphics(g), physics(p), savedPos(0,1,
 	desc.material = physMat;
 	desc.upDirection = PxVec3(0,1,0);
 	//desc.slopeLimit = cosf(M_PI/4);
-	desc.density = 10;
+	desc.density = 100;
 	desc.stepOffset = 0.5;
 	controller = physics.getControllerManager()->createController(*physics.getPhysics(), physics.getScene(), desc);
+	std::cout<< controller->getActor()->getMass()<<" MASS NERD"<<std::endl;
 	std::cout <<controller->getPosition().x<< " START POS SDASDS "<< controller->getPosition().x - controller->getFootPosition().x - controller->getContactOffset()<<std::endl;
 }
 
@@ -104,7 +106,7 @@ void Player::update(std::array<bool, 8> & keys, float x, float y, float deltaTim
 
 	PxControllerState state;
 	controller->getState(state);
-	bool grounded = state.collisionFlags & PxControllerFlag::eCOLLISION_DOWN;
+	bool grounded = (state.collisionFlags & PxControllerFlag::eCOLLISION_DOWN);
 	if(keys[7]){
 		/*physics.getScene()->removeActor(*controller->getActor());
 		//physBody->addForce(PxVec3(0, 100,0));
@@ -137,8 +139,9 @@ void Player::update(std::array<bool, 8> & keys, float x, float y, float deltaTim
 	righ *= Settings::Speed * Settings::Timestep;
 	if(!grounded){
 		gravity += physics.getScene()->getGravity().y*Settings::Timestep/10;
-		if(gravity < -20*Settings::Timestep)
+		if(gravity < -20*Settings::Timestep){
 			gravity = -20 * Settings::Timestep;
+		}
 	}
 	else if(gravity <0)
 		gravity = 0;

@@ -4,7 +4,7 @@ class Player;
 class Physics;
 
 class Graphics{
-	vector<Model *> models;
+	vector<unique_ptr<Model>> models;
 
 	GLuint mainProg;
 
@@ -28,7 +28,7 @@ public:
 	~Graphics();
 	void update();
 	bool isOpen() const;
-	//void addStaticModel(string);
+	void addStaticModel(string);
 	void addDynamicModel(string, Physics &);
 	GLFWwindow * getWindow() const;
 	void setPlayer(Player *);

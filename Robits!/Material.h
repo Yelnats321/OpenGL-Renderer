@@ -27,6 +27,12 @@ struct Material{
 		Ks[1] = 1;
 		Ks[2] = 1;
 	}
+	~Material(){
+		glDeleteTextures(1,&map_Ka);
+		glDeleteTextures(1,&map_Kd);
+		glDeleteTextures(1,&map_d);
+		glDeleteTextures(1,&map_bump);
+	}
 	//Specular exponent
 	float Ns;
 	//Optical density, index of refraction
