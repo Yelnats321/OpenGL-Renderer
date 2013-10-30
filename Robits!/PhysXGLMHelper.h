@@ -10,13 +10,15 @@ inline glm::vec3 ptog(PxExtendedVec3 & in){
 	return glm::vec3(in.x, in.y, in.z);
 }
 
+//due to something retarded, physx has w-x-y-z and gml has x-y-z-w 
 inline glm::quat ptog(PxQuat & in){
-	return glm::quat(in.x, in.y, in.z, in.w);
+	return glm::quat(in.w, in.x, in.y, in.z);
 }
 
-inline PxQuat gtop(glm::quat & in){
-	return PxQuat(in.x, in.y, in.z, in.w);
-}
+//this rotation change might be wrong!!!!!
+/*inline PxQuat gtop(glm::quat & in){
+	return PxQuat(in.z, in.y, in.x, in.w);
+}*/
 
 inline PxVec3 gtop(glm::vec3 & in){
 	return PxVec3(in.x, in.y, in.z);

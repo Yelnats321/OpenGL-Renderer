@@ -178,7 +178,7 @@ void Graphics::setLight(){
 			glm::mat4 depthMVP = depthProjectionMatrix*moveMatrix*i->getModelMatrix();
 			glUniformMatrix4fv(depthMVPpos,1, GL_FALSE, glm::value_ptr(depthMVP));
 			glBindVertexArray(i->getMesh()->vao);
-			glDrawElements(GL_TRIANGLES, i->getMesh()->getNbIndices(), GL_UNSIGNED_INT,0);
+			glDrawElements(GL_TRIANGLES, i->getMesh()->nbIndices, GL_UNSIGNED_INT,0);
 		}
 	}
 }
@@ -213,13 +213,13 @@ void Graphics::update(){
 		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player->getCameraMatrix()));
 		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, glm::value_ptr(matrix));
 		glUniformMatrix4fv(modelPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
-		glUniform1f(toggleTextures, i->getMesh()->getFile()->useTextures());
+		glUniform1f(toggleTextures, i->getMesh()->file->useTextures());
 		glBindVertexArray(i->getMesh()->vao);
 		//loop through all the material calls
-		for(auto mats = i->getMesh()->getMatCalls().begin(); mats != i->getMesh()->getMatCalls().end(); ++mats){
+		for(auto mats = i->getMesh()->matCalls.begin(); mats != i->getMesh()->matCalls.end(); ++mats){
 			//bind the material data
 			{
-				const Material * currMat = i->getMesh()->getFile()->getMaterial(mats->first);
+				const Material * currMat = i->getMesh()->file->getMaterial(mats->first);
 				glUniform3f(ambColor, currMat->Ka[0], currMat->Ka[1], currMat->Ka[2]);
 				glUniform3f(difColor, currMat->Kd[0], currMat->Kd[1], currMat->Kd[2]);
 				glUniform3f(specColor, currMat->Ks[0], currMat->Ks[1], currMat->Ks[2]);
@@ -258,12 +258,12 @@ void Graphics::update(){
 					glBindTexture(GL_TEXTURE_2D, blueTex);
 			}
 			//std::cout<< mats->second << " ";
-			if(mats+1 != i->getMesh()->getMatCalls().end()){
+			if(mats+1 != i->getMesh()->matCalls.end()){
 				glDrawElements(GL_TRIANGLES, (mats+1)->second - mats->second, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) *mats->second));
 			//	std::cout<<(mats+1)->second - mats->second<< " ";
 			}
 			else{
-				glDrawElements(GL_TRIANGLES, i->getMesh()->getNbIndices() -mats->second, GL_UNSIGNED_INT,(void*)(sizeof(unsigned int) *mats->second));
+				glDrawElements(GL_TRIANGLES, i->getMesh()->nbIndices -mats->second, GL_UNSIGNED_INT,(void*)(sizeof(unsigned int) *mats->second));
 			//	std::cout<<i->getMesh()->getNbIndices()<<std::endl<<std::endl;
 			}
 		}
@@ -275,7 +275,6 @@ void Graphics::update(){
 }
 void Graphics::addStaticModel(string name){
 	const ObjFile * file = loadFile(name);
-	std::cout<<glfwGetTime()<<std::endl;
 	for(const auto & i:file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
 		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
@@ -316,7 +315,8 @@ void Graphics::addDynamicModel(string name, Physics & physics){
 			//std::cout<<file->getMeshes().find(r->getName())->second<<std::endl;
 			if(newmods.find(r->getName()) != newmods.end()){
 				r->userData = newmods[r->getName()];
-				newmods[r->getName()]->setOrigin(r->getGlobalPose().p);
+				newmods[r->getName()]->setOrigin(r->getGlobalPose());
+				PxQuat & rotation = r->getGlobalPose().q;
 			}
 			//r->userData = file->getMeshes().find(r->getName())->second;
 			//file->getMeshes().find(r->getName())->second.setOrigin(r->getGlobalPose().p);

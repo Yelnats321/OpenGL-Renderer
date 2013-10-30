@@ -36,7 +36,8 @@ Physics::Physics(){
 		std::cout << "Can't make floor for some reason ";
 	floorRigid->setName("floor");
 	pxScene->addActor(*floorRigid);*/
-	/*const char*     pvd_host_ip = "127.0.0.1";  // IP of the PC which is running PVD
+	pvdConnection = nullptr;
+	const char*     pvd_host_ip = "127.0.0.1";  // IP of the PC which is running PVD
 	int             port        = 5425;         // TCP port to connect to, where PVD is listening
 	unsigned int    timeout     = 100;          // timeout in milliseconds to wait for PVD to respond,
 	// consoles and remote PCs need a higher timeout.
@@ -44,7 +45,7 @@ Physics::Physics(){
 
 	// and now try to connect
 	pvdConnection = PxVisualDebuggerExt::createConnection(pxPhysics->getPvdConnectionManager(),
-		pvd_host_ip, port, timeout, connectionFlags);*/
+		pvd_host_ip, port, timeout, connectionFlags);
 
 
 }

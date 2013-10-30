@@ -37,18 +37,22 @@ void Model::setPosition(float x, float y, float z){
 
 void Model::change(){
 	matrix = glm::mat4(1.0);
-	matrix = glm::translate(matrix, position-origin)*glm::toMat4(rotation);
+	matrix = glm::translate(matrix, position);
+	matrix *= glm::toMat4(rotation * rotOrigin);
 	matrix = glm::scale(matrix, scale);
+	matrix = glm::translate(matrix, -posOrigin);
+
 }
 
 void Model::setTransform(PxTransform & trans){
 	position = ptog(trans.p);
-	//rotation = ptog(trans.q);
+	rotation = ptog(trans.q);
 	change();
 }
 
-void Model::setOrigin(PxVec3 & pos){
-	origin = ptog(pos);
+void Model::setOrigin(PxTransform & tran){
+	posOrigin = ptog(tran.p);
+	rotOrigin = glm::inverse(ptog(tran.q));
 }
 
 const Mesh * Model::getMesh() const{return mesh;}

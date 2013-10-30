@@ -7,8 +7,8 @@ using namespace physx;
 class Model{
 protected:
 	glm::mat4 matrix;
-	glm::vec3 scale, position, origin;
-	glm::quat rotation;
+	glm::vec3 scale, position, posOrigin;
+	glm::quat rotation, rotOrigin;
 	void change();
 	const Mesh * mesh;
 public:
@@ -22,7 +22,7 @@ public:
 	void setPosition(glm::vec3 &);
 	void setPosition(float, float, float);
 	void setTransform(PxTransform &);
-	void setOrigin(PxVec3 &);
+	void setOrigin(PxTransform &);
 	/*void scale(glm::vec3 &);
 	void rotate(glm::vec3 &);
 	void move(glm::vec3 &);*/

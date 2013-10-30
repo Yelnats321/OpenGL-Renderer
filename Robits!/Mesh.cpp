@@ -11,6 +11,6 @@ Mesh::~Mesh(){
 }
 
 //size is number of TRIANGLES POINTS IE INDICES
-const int Mesh::getNbIndices() const{return nbIndices;}
+/*const int Mesh::getNbIndices() const{return nbIndices;}
 const ObjFile * Mesh::getFile() const{return file;}
-const vector<std::pair<string,int>> & Mesh::getMatCalls() const{return matCalls;}
+const vector<std::pair<string,int>> & Mesh::getMatCalls() const{return matCalls;}*/
