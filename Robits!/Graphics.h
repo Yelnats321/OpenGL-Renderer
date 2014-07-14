@@ -30,6 +30,7 @@ public:
 	bool isOpen() const;
 	void addStaticModel(string);
 	void addDynamicModel(string, Physics &);
+	vector<PxRigidDynamic *> addBus(string, Physics &);
 	GLFWwindow * getWindow() const;
 	void setPlayer(Player *);
 	void setLight();

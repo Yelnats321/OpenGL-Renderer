@@ -51,7 +51,7 @@ GLuint genShaders(string vert, string frag){
 	GLint statusF, statusV;
 	glGetShaderiv( fragShader, GL_COMPILE_STATUS, &statusF ); 
 	glGetShaderiv( vertShader, GL_COMPILE_STATUS, &statusV ); 
-	std::cout<<statusV<< " " << statusF << std::endl;
+	std::cout<<vert<< " " << statusF << std::endl;
 
 	// Link the vertex and fragment shader into a shader program
 	GLuint shaderProg = glCreateProgram();
@@ -97,10 +97,10 @@ GLuint loadTexture(string name, bool sRGB){
 	return texture;
 }
 
-void locationAppend(string origin, string * file){
+void locationAppend(string origin, string & file){
 	std::replace(origin.begin(), origin.end(), '/', '\\');
 	if(origin.find_last_of('\\')!= string::npos){
-		*file = origin.substr(0, origin.find_last_of('\\') +1) + *file;
+		file = origin.substr(0, origin.find_last_of('\\') +1) + file;
 	}
 }
 
@@ -195,7 +195,7 @@ map<string, Material> loadMaterialLibrary(string name){
 		else if(key == "map_Ka" || key == "map_Kd" || key == "map_d" || key == "bump" || key == "map_bump"){
 			string mapName;
 			ss>>mapName;
-			locationAppend(name, &mapName);
+			locationAppend(name, mapName);
 			bool sRGB =!( key=="bump" || key == "map_bump");
 			GLuint texture = loadTexture(mapName, sRGB);
 
@@ -221,15 +221,15 @@ map<string, Material> loadMaterialLibrary(string name){
 	return std::move(mats);
 }
 
-struct GLuintData{
-	GLuint x, y, z;
-	GLuintData(GLuint a, GLuint b, GLuint c):x(a), y(b), z(c){}
-	inline bool operator==(const GLuintData &rhs) const{
-		return(x==rhs.x && y == rhs.y && z ==rhs.z);
+struct VertexData{
+	GLuint pos, tex, norm;
+	VertexData(GLuint a, GLuint b, GLuint c):pos(a), tex(b), norm(c){}
+	inline bool operator==(const VertexData &rhs) const{
+		return(pos==rhs.pos && tex == rhs.tex && norm ==rhs.norm);
 	}
 };
 
-bool parseObj(string name, vector<glm::vec3> & vertices, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<GLuintData> & pointData, vector<std::pair<string, int> > & matCalls, map<string, Material> & matLib, vector<std::pair<string, int> > & groups){	std::cout<<"Loading file " + name<<std::endl;
+bool parseObj(string name, vector<glm::vec3> & positions, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<VertexData> & vertexData, vector<std::pair<string, int> > & matCalls, map<string, Material> & matLib, vector<std::pair<string, int> > & groups){	std::cout<<"Loading file " + name<<std::endl;
 	std::ifstream file;
 	file.open(name);
 	if(file.fail()){
@@ -259,7 +259,7 @@ bool parseObj(string name, vector<glm::vec3> & vertices, vector<glm::vec2> & tex
 			float x, y, z;
 			ss >> x >> std::ws>> y>>std::ws>> z;
 			if(key=="v")
-				vertices.emplace_back(x,y,z);
+				positions.emplace_back(x,y,z);
 			else if(key=="vt")
 				textures.emplace_back(x,y);
 			else
@@ -269,27 +269,26 @@ bool parseObj(string name, vector<glm::vec3> & vertices, vector<glm::vec2> & tex
 		else if(key == "g"){
 			string groupName;
 			ss>>groupName;
-			if(groups.size() > 0 && groups[groups.size()-1].second == pointData.size())
-				groups[groups.size()-1].first = std::move(groupName);
+			if(groups.size() > 0 && groups.back().second == vertexData.size())
+				groups.back().first = std::move(groupName);
 			else
-				groups.emplace_back(std::move(groupName), pointData.size());
+				groups.emplace_back(std::move(groupName), vertexData.size());
 		}
 
 		else if(key == "mtllib"){
 			string matName;
 			ss >> matName;
-			locationAppend(name, &matName);
-
+			locationAppend(name, matName);
 			matLib = std::move(loadMaterialLibrary(matName));
 		}
 
 		else if(key == "usemtl"){
 			string mtlName;
 			ss >> mtlName;
-			if(matCalls.size() > 0 && matCalls[matCalls.size()-1].second == pointData.size())
-				matCalls[matCalls.size()-1].first= std::move(mtlName);
+			if(matCalls.size() > 0 && matCalls.back().second == vertexData.size())
+				matCalls.back().first= std::move(mtlName);
 			else
-				matCalls.emplace_back(std::move(mtlName), pointData.size());
+				matCalls.emplace_back(std::move(mtlName), vertexData.size());
 		}
 		//faces
 		else if(key == "f"){
@@ -306,11 +305,11 @@ bool parseObj(string name, vector<glm::vec3> & vertices, vector<glm::vec2> & tex
 						ss>> c;
 					}
 				}
-				pointData.emplace_back(a,b,c);
+				vertexData.emplace_back(a,b,c);
 				if(i ==2){
 					ss>>std::ws;
 					if(!ss.eof()){
-						pointData.emplace_back(a,b,c);
+						vertexData.emplace_back(a,b,c);
 						a=b=c=0;
 
 						ss >> a;
@@ -323,27 +322,29 @@ bool parseObj(string name, vector<glm::vec3> & vertices, vector<glm::vec2> & tex
 							}
 						}	
 
-						pointData.emplace_back(a,b,c);
+						vertexData.emplace_back(a,b,c);
 
-						pointData.emplace_back(pointData[pointData.size()-5]);
+						vertexData.emplace_back(vertexData[vertexData.size()-5]);
 					}
 				}
 			}
 		}
 	}
+	if(groups.size()==0)
+		groups.emplace_back("default",0);
 	return true;
 }
 
-void calculateTangents(vector<glm::vec3> & vertices, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<GLuintData> & pointData, vector<glm::vec3>& tangents, vector<glm::vec3> & bitangents){
-	for(int i = 0; i <pointData.size(); i+=3){
+void calculateTangents(vector<glm::vec3> & positions, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<VertexData> & vertexData, vector<glm::vec3>& tangents, vector<glm::vec3> & bitangents){
+	for(int i = 0; i <vertexData.size(); i+=3){
 		//std::cout<<"triangle "<<i/3<<std::endl;
-		glm::vec3 & v0 = vertices[pointData[i].x-1];
-		glm::vec3 & v1 = vertices[pointData[i+1].x-1];
-		glm::vec3 & v2 = vertices[pointData[i+2].x-1];
+		glm::vec3 & v0 = positions[vertexData[i].pos-1];
+		glm::vec3 & v1 = positions[vertexData[i+1].pos-1];
+		glm::vec3 & v2 = positions[vertexData[i+2].pos-1];
 
-		glm::vec2 & uv0 = textures[pointData[i].y-1];
-		glm::vec2 & uv1 = textures[pointData[i+1].y-1];
-		glm::vec2 & uv2 = textures[pointData[i+2].y-1];
+		glm::vec2 & uv0 = textures[vertexData[i].tex-1];
+		glm::vec2 & uv1 = textures[vertexData[i+1].tex-1];
+		glm::vec2 & uv2 = textures[vertexData[i+2].tex-1];
 
 		glm::vec3 deltaPos1 = v1-v0;
 		glm::vec3 deltaPos2 = v2-v0;
@@ -352,16 +353,15 @@ void calculateTangents(vector<glm::vec3> & vertices, vector<glm::vec2> & texture
 		glm::vec2 deltaUV2 = uv2-uv0;
 
 		float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-		glm::vec3 tangent = (deltaPos1 * deltaUV2.y   - deltaPos2 * deltaUV1.y)*r;
-		glm::vec3 bitangent = (deltaPos2 * deltaUV1.x   - deltaPos1 * deltaUV2.x)*r;
-
+		glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y)*r;
+		glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x)*r;
 		for(int j =0; j < 3; j++){
 			tangents.emplace_back(tangent);
 			bitangents.emplace_back(bitangent);
 		}
 	}
-	for(int i = 0; i < pointData.size(); i++){
-		glm::vec3 & n = normals[pointData[i].z-1];
+	for(int i = 0; i < vertexData.size(); i++){
+		glm::vec3 & n = normals[vertexData[i].norm-1];
 		glm::vec3 & t = tangents[i];
 		glm::vec3 & b = bitangents[i];
 
@@ -381,24 +381,24 @@ const ObjFile * loadFile(string name){
 		return files.find(name)->second.get();
 	}
 
-	vector<glm::vec3> vertices;
+	vector<glm::vec3> positions;
 	vector<glm::vec2> textures;
 	vector<glm::vec3> normals;
 
-	vector<GLuintData> pointData;
+	vector<VertexData> vertexData;
 	vector<std::pair<string, int> > masterMatCalls;
 	map<string, Material>matLib;
 	vector<std::pair<string, int> > groups;
-	if(!parseObj(name, vertices, textures, normals, pointData, masterMatCalls, matLib, groups))
+	if(!parseObj(name, positions, textures, normals, vertexData, masterMatCalls, matLib, groups))
 		return nullptr;
 
 	/*for(const auto & i : groups)
 		std::cout<<i.first << " " <<i.second<<std::endl;*/
 	bool useTextures = false, useNormals =false;
 
-	if(pointData[0].y != 0)
+	if(vertexData[0].tex != 0)
 		useTextures = true;
-	if(pointData[0].z !=0)
+	if(vertexData[0].norm !=0)
 		useNormals = true;
 	//REMEMBER SPONGEBOB
 	//RAVIOLI RAVIOLI
@@ -409,23 +409,23 @@ const ObjFile * loadFile(string name){
 	vector<glm::vec3> tangents;
 	vector<glm::vec3> bitangents;
 	if(useNormals && useTextures){
-		calculateTangents(vertices, textures, normals, pointData, tangents, bitangents);
+		calculateTangents(positions, textures, normals, vertexData, tangents, bitangents);
 	}
 
-	int nbOfPoints = pointData.size();
-	vector<GLuint> elements(nbOfPoints);
-	for(int i = 0; i < nbOfPoints; ++i)
+	int nbOfVertices = vertexData.size();
+	vector<GLuint> elements(nbOfVertices);
+	for(int i = 0; i < nbOfVertices; ++i)
 		elements[i] = i;
 
 	std::cout << glfwGetTime() << std::endl;
 	//Assume all elements are unique, until you check out if they aren't
-	for(int i =0; i<nbOfPoints; ++i){
+	for(int i =0; i<nbOfVertices; ++i){
 		/*std::cout << tangents[i].x << " " <<tangents[i].y<<" "<<tangents[i].z<<std::endl;
 		std::cout << bitangents[i].x << " " <<bitangents[i].y<<" "<<bitangents[i].z<<std::endl;
-		std::cout<< normals[pointData[i].x-1].z<< " "<< normals[pointData[i].z-1].y<< " "<< normals[pointData[i].z-1].z<< std::endl<<std::endl;*/
+		std::cout<< normals[vertexData[i].x-1].z<< " "<< normals[vertexData[i].z-1].y<< " "<< normals[vertexData[i].z-1].z<< std::endl<<std::endl;*/
 		if(elements[i] == i){
-			for(int j = i+1; j <nbOfPoints; ++j){
-				if(pointData[i] == pointData[j]){
+			for(int j = i+1; j <nbOfVertices; ++j){
+				if(vertexData[i] == vertexData[j]){
 					if(useTextures && useNormals){
 						tangents[i] += tangents[j];
 						bitangents[i] += bitangents[j];
@@ -448,29 +448,29 @@ const ObjFile * loadFile(string name){
 		blockSize = 14;
 	int sortedElemSize = sortElem.size();
 	vector<float> data(sortedElemSize * blockSize, 0);
-	std::cout<<nbOfPoints << " " <<sortedElemSize << std::endl<<std::endl<<std::endl;
+	std::cout<<nbOfVertices << " " <<sortedElemSize << std::endl<<std::endl<<std::endl;
 	for(int k =0; k < sortedElemSize; ++k){
 		GLuint pos = sortElem[k];
 		//std::cout<<pos<<std::endl;
 		int dataPos = k*blockSize;
 		//pack all the elements that are unique
-		//&vertices[pointData[elemPos]-1][0], &vertices[pointData[elemPos]][0],
-		//std::copy(&vertices[pointData[elemPos]-1], &vertices[pointData[elemPos]], &data[dataPos]);
-		data[dataPos] = vertices[pointData[pos].x-1].x;
-		data[dataPos+1] = vertices[pointData[pos].x-1].y;
-		data[dataPos+2] = vertices[pointData[pos].x-1].z;
+		//&positions[vertexData[elemPos]-1][0], &positions[vertexData[elemPos]][0],
+		//std::copy(&positions[vertexData[elemPos]-1], &positions[vertexData[elemPos]], &data[dataPos]);
+		data[dataPos] = positions[vertexData[pos].pos-1].x;
+		data[dataPos+1] = positions[vertexData[pos].pos-1].y;
+		data[dataPos+2] = positions[vertexData[pos].pos-1].z;
 		if(useTextures){
-			data[dataPos+3] = textures[pointData[pos].y -1].x;
-			data[dataPos+4] = textures[pointData[pos].y -1].y;
+			data[dataPos+3] = textures[vertexData[pos].tex -1].x;
+			data[dataPos+4] = textures[vertexData[pos].tex -1].y;
 			dataPos+=2;
 		}
 
 		if(useNormals){
-			//std::copy(normals.begin() + (pointData[elemPos+2]-1)*3, normals.begin()+(pointData[elemPos+2]-1)*3+3, data.begin()+dataPos+5);
-			//std::copy(&normals[(pointData[elemPos+2]-1)*3], &normals[(pointData[elemPos+2]-1)*3+3], &data[dataPos+5]);
-			data[dataPos+3] = normals[pointData[pos].z-1].x;
-			data[dataPos+4] = normals[pointData[pos].z-1].y;
-			data[dataPos+5] = normals[pointData[pos].z-1].z;
+			//std::copy(normals.begin() + (vertexData[elemPos+2]-1)*3, normals.begin()+(vertexData[elemPos+2]-1)*3+3, data.begin()+dataPos+5);
+			//std::copy(&normals[(vertexData[elemPos+2]-1)*3], &normals[(vertexData[elemPos+2]-1)*3+3], &data[dataPos+5]);
+			data[dataPos+3] = normals[vertexData[pos].norm-1].x;
+			data[dataPos+4] = normals[vertexData[pos].norm-1].y;
+			data[dataPos+5] = normals[vertexData[pos].norm-1].z;
 		}
 
 		if(useTextures && useNormals){
@@ -484,7 +484,7 @@ const ObjFile * loadFile(string name){
 
 		//point elements to their true location, rather than their previous pos location
 		if(k != pos){
-			std::replace(elements.begin(), elements.end(), pos, (GLuint)k);
+			std::replace(elements.begin()+k, elements.end(), pos, (GLuint)k);
 		}
 	}
 	std::cout << glfwGetTime() << std::endl;
@@ -499,18 +499,18 @@ const ObjFile * loadFile(string name){
 
 	for(int j = 0; j<groups.size(); ++j){
 		const int currPos = groups[j].second;
-		int nbTrianglePoints;
+		int nbGroupVertices;
 		if(j+1 == groups.size())
-			nbTrianglePoints = nbOfPoints - currPos;
+			nbGroupVertices = nbOfVertices - currPos;
 		else
-			nbTrianglePoints = groups[j+1].second - currPos;
+			nbGroupVertices = groups[j+1].second - currPos;
 
 		std::vector<std::pair<string, int>> matCalls;
 		for(int mat = 0; mat < masterMatCalls.size(); ++mat){
 			//if this material call is the less than or equal to the group start AND the next one is too big for the group start OR the next one is the end
 			if(masterMatCalls[mat].second <= currPos && (mat+1==masterMatCalls.size() ||masterMatCalls[mat+1].second > currPos))
 				matCalls.emplace_back(masterMatCalls[mat].first, 0);
-			else if(masterMatCalls[mat].second > currPos && masterMatCalls[mat].second < currPos + nbTrianglePoints)
+			else if(masterMatCalls[mat].second > currPos && masterMatCalls[mat].second < currPos + nbGroupVertices)
 				matCalls.emplace_back(masterMatCalls[mat].first, masterMatCalls[mat].second-currPos);
 		}
 		GLuint ebo = 0, vao =0;
@@ -519,7 +519,7 @@ const ObjFile * loadFile(string name){
 
 		glGenBuffers(1, &ebo);
 		glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ebo);
-		glBufferData( GL_ELEMENT_ARRAY_BUFFER, nbTrianglePoints * sizeof(GLuint), &elements[currPos], GL_STATIC_DRAW);
+		glBufferData( GL_ELEMENT_ARRAY_BUFFER, nbGroupVertices * sizeof(GLuint), &elements[currPos], GL_STATIC_DRAW);
 
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), 0);
 		glEnableVertexAttribArray(0);
@@ -537,7 +537,7 @@ const ObjFile * loadFile(string name){
 			glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float)*11));
 			glEnableVertexAttribArray(4);
 		}
-		objFile->addMesh(groups[j].first, unique_ptr<Mesh>(new Mesh(objFile, vao, ebo, nbTrianglePoints, std::move(matCalls))));
+		objFile->addMesh(groups[j].first, unique_ptr<Mesh>(new Mesh(objFile, vao, ebo, nbGroupVertices, std::move(matCalls))));
 	}
 
 	return objFile; 

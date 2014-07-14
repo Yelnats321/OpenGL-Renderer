@@ -12,7 +12,6 @@ out vec3 EyeDir;
 
 out vec3 NormalCamSpace;
 
-out vec4 ShadowCoord;
 uniform mat4 MVP;
 uniform mat4 M;
 uniform mat4 V;
@@ -24,8 +23,6 @@ void main() {
 	vec3 PositionCamSpace = (V*M*vec4(position, 1.0)).xyz;
 	vec3 LightDirCamSpace = (V*vec4(lightPos, 1.0)).xyz - PositionCamSpace;
 	gl_Position = MVP * vec4(position, 1.0 );
-
-	ShadowCoord =vec4( PositionWorldSpace - lightPos,1);
 
 	NormalCamSpace =(V*M * vec4(normal,0.0)).xyz;
 

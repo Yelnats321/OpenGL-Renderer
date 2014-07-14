@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Physics.h"
-
+#include "Settings.h"
 #include "Model.h"
 
 class errorCallback:public PxErrorCallback{
@@ -71,8 +71,8 @@ void Physics::loadRepX(string name, PxCollection * buffer, PxCollection * scene,
 	repx::deserializeFromRepX(data, *pxPhysics, *pxCooking, table, NULL, *buffer, *scene, NULL);
 }
 
-void Physics::update(float deltaTime){
-	pxScene->simulate(deltaTime);
+void Physics::update(){
+	pxScene->simulate(Settings::Timestep);
 	pxScene->fetchResults(true);
 
 	PxU32 nbActiveTransforms;

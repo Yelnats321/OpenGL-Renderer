@@ -9,10 +9,15 @@
 
 int main(){
 	Physics physics;
-	Graphics graphics;	Player player(graphics, physics);	graphics.setPlayer(&player);	Input input(player, graphics.getWindow());	/*Model * dragon = graphics.addModel("sponza-x\\sponza.obj");
+	Graphics graphics;
+	Player player(graphics, physics);
+	graphics.setPlayer(&player);
+
+	/*Model * dragon = graphics.addModel("sponza-x\\sponza.obj");
 	dragon->setScale(0.001, 0.001, 0.001);*/
 	//graphics.addStaticModel("sponza-x/sponza.obj");
-	graphics.addDynamicModel("assets/contraption.obj", physics);
+	//graphics.addDynamicModel("assets/contraption.obj", physics);
+	auto rigids = graphics.addBus("assets/contraption.obj", physics);
 	//floor2->setPosition(0,5,0);
 	double lastTime = glfwGetTime();
 	double acumulator = 0.0;
@@ -24,8 +29,8 @@ int main(){
 		int steps = 0;
 		while(acumulator >= Settings::Timestep){
 			acumulator -= Settings::Timestep;
-			input.update(Settings::Timestep);
-			physics.update(Settings::Timestep);
+			updateInput(player, graphics.getWindow(), rigids);
+			physics.update();
 			++steps;
 		}
 		if(steps >=2)

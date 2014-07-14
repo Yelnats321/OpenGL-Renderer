@@ -3,11 +3,10 @@
 in vec3 PositionWorldSpace;
 in vec2 UV;
 
+
 in vec3 LightDir;
 in vec3 EyeDir;
 in vec3 NormalCamSpace;
-
-in vec4 ShadowCoord;
 
 uniform vec3 lightPos;
 uniform float ambientIntensity;
@@ -71,7 +70,7 @@ void main(){
 	//float bias = 0.0025*tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
 	//bias = clamp(bias, 0,0.005);
 	float bias = 0.001;
-	float visibility = texture(shadowMap, vec4(ShadowCoord.xyz/ShadowCoord.w, VectorToDepthValue(lightVec)-bias));
+	float visibility = texture(shadowMap, vec4(-lightVec, VectorToDepthValue(lightVec)-bias));
 	outColor =texture(difTex, uv).rgb* diffuseColor * lightPower* cosTheta *attenIntensity * visibility+
 		/*texture(specTex, uv).rgb**/ specularColor* lightPower* cosAlpha *attenIntensity * visibility+
 		texture(ambTex, uv).rgb* ambientColor* ambientIntensity;

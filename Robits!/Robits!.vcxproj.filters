@@ -42,9 +42,6 @@
     <ClCompile Include="Model.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="Mesh.cpp">
-      <Filter>Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -56,6 +53,9 @@
     </ClCompile>
     <ClCompile Include="Physics.cpp">
       <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>Data Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -72,9 +72,6 @@
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Model.h">
-      <Filter>Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Mesh.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
@@ -94,6 +91,9 @@
     </ClInclude>
     <ClInclude Include="Physics.h">
       <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Data Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

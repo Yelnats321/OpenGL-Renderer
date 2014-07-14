@@ -88,12 +88,10 @@ void Graphics::setupMainProg(string v, string f){
 }
 
 void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(v, f);
-	glUseProgram(shadowProgram);
 
 	framebuffer = 0;
 	glGenFramebuffers(1, &framebuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
 	glGenTextures(1, &shadowTexture);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
 	for(int i = 0; i < 6; i++){
@@ -128,11 +126,11 @@ void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(
 	//needed for use of shadow cubemap
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glDrawBuffer(GL_NONE);
 	/*glGenRenderbuffers(1, &renderbuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 800);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);*/
-
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Frame buffer dun goofed "<<glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
 }
@@ -169,7 +167,6 @@ void Graphics::setLight(){
 	//in the fragment shader bro
 	//don't go lower than 0.1 near, or else you ahve to finick with the bias 
 	glm::mat4 depthProjectionMatrix = glm::perspective(90.f, 1.f, 0.1f, 50.f);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
 	for(int loop = 0; loop < 6; ++loop){
 		glm::mat4 moveMatrix =glm::translate(sideViews[loop], -player->getSavedPos());
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+loop, shadowTexture,0);
@@ -178,14 +175,14 @@ void Graphics::setLight(){
 			glm::mat4 depthMVP = depthProjectionMatrix*moveMatrix*i->getModelMatrix();
 			glUniformMatrix4fv(depthMVPpos,1, GL_FALSE, glm::value_ptr(depthMVP));
 			glBindVertexArray(i->getMesh()->vao);
-			glDrawElements(GL_TRIANGLES, i->getMesh()->nbIndices, GL_UNSIGNED_INT,0);
+			glDrawElements(GL_TRIANGLES, i->getMesh()->nbVertices, GL_UNSIGNED_INT,0);
 		}
 	}
 }
 
 void Graphics::update(){
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(mainProg);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glViewport(0,0,800,600);
@@ -210,61 +207,58 @@ void Graphics::update(){
 		std::cout << matrix[2][0] << " " << matrix[2][1] << " " << matrix[2][2] << " " <<matrix[2][3] << std::endl;
 		std::cout << matrix[3][0] << " " << matrix[3][1] << " " << matrix[3][2] << " " <<matrix[3][3] << std::endl;
 		std::cout << std::endl;*/
+		auto mesh = i->getMesh();
 		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player->getCameraMatrix()));
 		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, glm::value_ptr(matrix));
 		glUniformMatrix4fv(modelPos, 1, GL_FALSE, glm::value_ptr(i->getModelMatrix()));
-		glUniform1f(toggleTextures, i->getMesh()->file->useTextures());
-		glBindVertexArray(i->getMesh()->vao);
+		glUniform1f(toggleTextures, mesh->file->useTextures());
+		glBindVertexArray(mesh->vao);
 		//loop through all the material calls
-		for(auto mats = i->getMesh()->matCalls.begin(); mats != i->getMesh()->matCalls.end(); ++mats){
+		for(auto & mats = mesh->matCalls.begin(); mats != mesh->matCalls.end(); ++mats){
 			//bind the material data
-			{
-				const Material * currMat = i->getMesh()->file->getMaterial(mats->first);
-				glUniform3f(ambColor, currMat->Ka[0], currMat->Ka[1], currMat->Ka[2]);
-				glUniform3f(difColor, currMat->Kd[0], currMat->Kd[1], currMat->Kd[2]);
-				glUniform3f(specColor, currMat->Ks[0], currMat->Ks[1], currMat->Ks[2]);
-				glUniform1f(shininess, currMat->Ns);
+			const Material * currMat = mesh->file->getMaterial(mats->first);
+			glUniform3f(ambColor, currMat->Ka[0], currMat->Ka[1], currMat->Ka[2]);
+			glUniform3f(difColor, currMat->Kd[0], currMat->Kd[1], currMat->Kd[2]);
+			glUniform3f(specColor, currMat->Ks[0], currMat->Ks[1], currMat->Ks[2]);
+			glUniform1f(shininess, currMat->Ns);
 
-				//No ambient texture? use diffuse instead
-				glActiveTexture(GL_TEXTURE0);
-				if(currMat->map_Ka !=0)
-					glBindTexture(GL_TEXTURE_2D, currMat->map_Ka);
+			//No ambient texture? use diffuse instead
+			glActiveTexture(GL_TEXTURE0);
+			if(currMat->map_Ka !=0)
+				glBindTexture(GL_TEXTURE_2D, currMat->map_Ka);
+			else if(currMat->map_Kd !=0)
+				glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
+			else
+				glBindTexture(GL_TEXTURE_2D, whiteTex);
 
-				else if(currMat->map_Kd !=0)
-					glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
+			glActiveTexture(GL_TEXTURE1);
+			if(currMat->map_Kd !=0)
+				glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
+			else
+				glBindTexture(GL_TEXTURE_2D, whiteTex);
 
-				else
-					glBindTexture(GL_TEXTURE_2D, whiteTex);
+			//no textures? use white instead
+			glActiveTexture(GL_TEXTURE3);
+			if(currMat->map_d !=0)
+				glBindTexture(GL_TEXTURE_2D, currMat->map_d);
+			else
+				glBindTexture(GL_TEXTURE_2D, whiteTex);
 
-				glActiveTexture(GL_TEXTURE1);
-				if(currMat->map_Kd !=0)
-					glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
-				else
-					glBindTexture(GL_TEXTURE_2D, whiteTex);
+			//no bump map? use 127,255,127 instead (0,1,0)
+			glActiveTexture(GL_TEXTURE4);
+			if(currMat->map_bump!=0)
+				glBindTexture(GL_TEXTURE_2D, currMat->map_bump);
+			else
+				glBindTexture(GL_TEXTURE_2D, blueTex);
 
-				//no textures? use white instead
-				glActiveTexture(GL_TEXTURE3);
-				if(currMat->map_d !=0)
-					glBindTexture(GL_TEXTURE_2D, currMat->map_d);
-				else{
-					glBindTexture(GL_TEXTURE_2D, whiteTex);
-				}
-				//no bump map? use 127,255,127 instead (0,1,0)
-				glActiveTexture(GL_TEXTURE4);
-				if(currMat->map_bump!=0){
-					glBindTexture(GL_TEXTURE_2D, currMat->map_bump);
-				}
-				else
-					glBindTexture(GL_TEXTURE_2D, blueTex);
-			}
 			//std::cout<< mats->second << " ";
-			if(mats+1 != i->getMesh()->matCalls.end()){
+			if(mats+1 != mesh->matCalls.end()){
 				glDrawElements(GL_TRIANGLES, (mats+1)->second - mats->second, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) *mats->second));
-			//	std::cout<<(mats+1)->second - mats->second<< " ";
+				//	std::cout<<(mats+1)->second - mats->second<< " ";
 			}
 			else{
-				glDrawElements(GL_TRIANGLES, i->getMesh()->nbIndices -mats->second, GL_UNSIGNED_INT,(void*)(sizeof(unsigned int) *mats->second));
-			//	std::cout<<i->getMesh()->getNbIndices()<<std::endl<<std::endl;
+				glDrawElements(GL_TRIANGLES, mesh->nbVertices -mats->second, GL_UNSIGNED_INT,(void*)(sizeof(unsigned int) *mats->second));
+				//	std::cout<<i->getMesh()->getNbIndices()<<std::endl<<std::endl;
 			}
 		}
 	}
@@ -278,10 +272,60 @@ void Graphics::addStaticModel(string name){
 	for(const auto & i:file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
 		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
-		models[models.size()-1]->setScale(0.001,0.001,0.001);
+		models.back().get()->setScale(0.01f,0.01,0.01);
 		//std::cout<<i.first<<std::endl;
 	}
 }
+
+vector<PxRigidDynamic *> Graphics::addBus(string name, Physics & physics){
+	const ObjFile * file = loadFile(name);
+	map<string, Model*> newmods;
+	for(const auto & i:file->getMeshes()){
+		//Model * mod = new Model(i.second.get());
+		//newmods.emplace(i.first, mod);
+		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
+		newmods.emplace(i.first, models.back().get());
+		//std::cout<<i.first<<std::endl;
+	}
+	//Model * mod =  new Model(loadMesh(name));
+	//models.emplace_back(mods);
+
+	name= name.substr(0, name.find_last_of('.')) + ".xml";
+
+	PxCollection* bufferCollection = physics.getPhysics()->createCollection();
+	PxCollection* sceneCollection = physics.getPhysics()->createCollection();
+	PxStringTable*  stringTable = &PxStringTableExt::createStringTable(physics.getFoundation()->getAllocator()); //stores names?
+	//PxUserReferences* externalRefs = NULL;// pxPhysics->createUserReferences();//we assume there are no external refs
+	//PxUserReferences * userRefs =  NULL;//  pxPhysics->createUserReferences();//would be used to receive refs and then pass to dependent deserialization calls
+
+	physics.loadRepX(name, bufferCollection, sceneCollection, stringTable);
+	physics.getPhysics()->addCollection(*sceneCollection, *physics.getScene()); //add the scene level objects to the PxScene scene.
+
+	vector<PxRigidDynamic *> rigids;
+	int numActors = sceneCollection->getNbObjects();
+	for(int i = 0; i < numActors; ++i){
+		PxSerializable * s = sceneCollection->getObject(i);
+		if(s->getConcreteType() == PxConcreteType::eRIGID_DYNAMIC){
+			PxRigidDynamic * r = static_cast<PxRigidDynamic *>(s);
+			//std::cout << r->getName()<<std::endl;
+			//std::cout<<file->getMeshes().find(r->getName())->second<<std::endl;
+			if(newmods.find(r->getName()) != newmods.end()){
+				rigids.push_back(r);
+				r->userData = newmods[r->getName()];
+				newmods[r->getName()]->setOrigin(r->getGlobalPose());
+				PxQuat & rotation = r->getGlobalPose().q;
+			}
+			//r->userData = file->getMeshes().find(r->getName())->second;
+			//file->getMeshes().find(r->getName())->second.setOrigin(r->getGlobalPose().p);
+		}
+	}
+
+	bufferCollection->release();
+	sceneCollection->release();
+	stringTable->release();
+	return rigids;
+}
+
 void Graphics::addDynamicModel(string name, Physics & physics){
 	const ObjFile * file = loadFile(name);
 	map<string, Model*> newmods;
@@ -289,12 +333,12 @@ void Graphics::addDynamicModel(string name, Physics & physics){
 		//Model * mod = new Model(i.second.get());
 		//newmods.emplace(i.first, mod);
 		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
-		newmods.emplace(i.first, models[models.size()-1].get());
+		newmods.emplace(i.first, models.back().get());
 		//std::cout<<i.first<<std::endl;
 	}
 	//Model * mod =  new Model(loadMesh(name));
 	//models.emplace_back(mods);
-	
+
 	name= name.substr(0, name.find_last_of('.')) + ".xml";
 
 	PxCollection* bufferCollection = physics.getPhysics()->createCollection();

@@ -2,7 +2,7 @@
 #include "Mesh.h"
 
 Mesh::Mesh(const ObjFile * f, GLuint a, GLuint e, int siz,vector<std::pair<string, int> > && m)
-	:file(f),vao(a), ebo(e), nbIndices(siz),matCalls(std::move(m)){
+	:file(f),vao(a), ebo(e), nbVertices(siz),matCalls(std::move(m)){
 }
 
 Mesh::~Mesh(){

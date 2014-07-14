@@ -1,11 +1,9 @@
 #include "stdafx.h"
 #include "Input.h"
 #include "Player.h"
+#include "Settings.h"
 
-Input::Input(Player & p, GLFWwindow * w): player(p), window(w){
-}
-
-void Input::update(float deltaTime){
+void updateInput(Player & player, GLFWwindow * window, vector<PxRigidDynamic *> & rigids){
 	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, 1);
 
@@ -43,5 +41,28 @@ void Input::update(float deltaTime){
 		keys[7] = true;
 	}
 	//should this be a thing?
-	player.update(keys, float(800/2 - xpos), float(600/2 - ypos), deltaTime);
+	player.update(keys, float(800/2 - xpos), float(600/2 - ypos), Settings::Timestep);
+
+	if(glfwGetKey(window, GLFW_KEY_RIGHT)==GLFW_PRESS){
+		for(const auto & i:rigids){
+			PxTransform tr = i->getGlobalPose();
+			tr.p.x +=10*Settings::Timestep;
+			i->setGlobalPose(tr);
+		}
+	}
+	if(glfwGetKey(window, GLFW_KEY_LEFT)==GLFW_PRESS){
+		for(const auto & i:rigids){
+		}
+	}
+	if(glfwGetKey(window, GLFW_KEY_UP)==GLFW_PRESS){
+		for(const auto & i:rigids){
+			PxTransform tr = i->getGlobalPose();
+			tr.p.y +=10*Settings::Timestep;
+			i->setGlobalPose(tr);
+		}
+	}
+	if(glfwGetKey(window, GLFW_KEY_DOWN)==GLFW_PRESS){
+		for(const auto & i:rigids){
+		}
+	}
 }

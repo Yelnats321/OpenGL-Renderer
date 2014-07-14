@@ -11,7 +11,7 @@ ObjFile::~ObjFile(){
 	glDeleteBuffers(1, &vbo);
 }
 
-void ObjFile::addMesh(string name,  unique_ptr<Mesh> && mesh){
+void ObjFile::addMesh(string name,  unique_ptr<Mesh> mesh){
 	meshes.emplace(name, std::move(mesh));
 }
 

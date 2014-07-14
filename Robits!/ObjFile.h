@@ -12,7 +12,7 @@ class ObjFile{
 public:
 	ObjFile(GLuint vbo, bool useTextures, map<string, Material> && materialLibrary);
 	~ObjFile();
-	void addMesh(string, unique_ptr<Mesh> &&);
+	void addMesh(string, unique_ptr<Mesh>);
 	const Material * getMaterial(string) const;
 	const bool useTextures() const;
 	const map<string, unique_ptr<Mesh> > & getMeshes() const;

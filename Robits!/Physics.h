@@ -17,7 +17,7 @@ class Physics{
 public:
 	Physics();
 	~Physics();
-	void update(float);
+	void update();
 	PxScene * getScene();
 	PxPhysics * getPhysics();
 	PxControllerManager * getControllerManager();
