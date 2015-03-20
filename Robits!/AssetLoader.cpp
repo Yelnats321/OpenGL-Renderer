@@ -67,7 +67,7 @@ GLuint genShaders(string vert, string frag){
 
 }
 
-GLuint loadTexture(string name, bool sRGB){
+GLuint loadTexture(string name, bool sRGB, bool mipmap){
 	if(textures.find(name) != textures.end()){
 		std::cout<<" -Returned loaded texture " +name + " at location "<<textures[name]<<std::endl;
 		return textures[name];
@@ -80,7 +80,7 @@ GLuint loadTexture(string name, bool sRGB){
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	else
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR: GL_LINEAR);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4.0f);
 	//TODO: this doesn't work on radeon cards maybe
@@ -122,7 +122,7 @@ map<string, Material> loadMaterialLibrary(string name){
 		line.emplace_back(std::move(buf));
 	}
 	file.close();
-	Material * currMat;
+	Material * currMat = nullptr;
 
 	for(const auto & itr:line){
 		string key;
