@@ -39,6 +39,7 @@ Graphics::Graphics(){    glfwInit();
 	setupMainProg("shaders/vert.vert", "shaders/frag.frag");
 	setupShadowProg("shaders/passShadow.vert","shaders/passShadow.frag");
 	//setupQuadProg("shaders/pass.vert", "shaders/pass.frag");
+	setupColorProg("shaders/pass.vert", "shaders/pass.frag");
 }
 
 Graphics::~Graphics(){
@@ -50,6 +51,14 @@ Graphics::~Graphics(){
 	/*glDeleteProgram(quadProgram);
 	glDeleteBuffers(1, &quadBuffer);
 	glDeleteVertexArrays(1, &quadVAO);*/
+
+	glDeleteProgram(colorProg);
+	glDeleteRenderbuffers(1,&colorDepthBuffer);
+	glDeleteTextures(1, &asciiTexture);
+	glDeleteTextures(1, &texColorBuffer);
+	glDeleteFramebuffers(1, &texFramebuffer);
+	glDeleteBuffers(1, &texBuffer);
+	glDeleteVertexArrays(1, &texVAO);
 
 	glDeleteTextures(1, &whiteTex);
 	glDeleteTextures(1, &blueTex);
@@ -83,8 +92,8 @@ void Graphics::setupMainProg(string v, string f){
 	glUniform1i(glGetUniformLocation(mainProg, "normalMap"), 4);
 	glUniform1i(glGetUniformLocation(mainProg, "shadowMap"), 5);
 
-	whiteTex = loadTexture("assets/white.bmp", false);
-	blueTex = loadTexture("assets/blue.bmp", false);
+	whiteTex = loadTexture("assets/white.bmp");
+	blueTex = loadTexture("assets/blue.bmp");
 }
 
 void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(v, f);
@@ -126,15 +135,65 @@ void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(
 	//needed for use of shadow cubemap
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-	glDrawBuffer(GL_NONE);
+	//glDrawBuffer(GL_NONE);
 	/*glGenRenderbuffers(1, &renderbuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 800);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);*/
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "Frame buffer dun goofed "<<glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
+		std::cout << "Frame buffer dun goofed "<<glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;*/
 }
 
+void Graphics::setupColorProg(string v, string f){
+	colorProg = genShaders(v, f);
+	glUseProgram(colorProg);
+	asciiTexture = loadTexture("assets/charMap.png", false, false);
+	glUniform1i(glGetUniformLocation(colorProg, "asciiTexture"), 1);
+
+	glGenFramebuffers(1, &texFramebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, texFramebuffer);
+	glGenTextures(1, &texColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	glFramebufferTexture2D(
+		GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0
+		);
+
+	glGenRenderbuffers(1, &colorDepthBuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, colorDepthBuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 600);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, colorDepthBuffer);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	std::cout << "Frame buffer dun goofed " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
+
+	glUniform1f(glGetUniformLocation(colorProg, "passTexture"), 0);
+	static const GLfloat quad[] = {
+		-1.0f, 1.0f, 0.0f,
+		-1.0f, -1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+
+		-1.0f, 1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+	};
+
+	glGenVertexArrays(1, &texVAO);
+	glBindVertexArray(texVAO);
+
+	glGenBuffers(1, &texBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, texBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+	
+}
 /*void Graphics::setupQuadProg(string v, string f){
 	quadProgram = genShaders(v,f);	glUseProgram(quadProgram);	glUniform1f(glGetUniformLocation(quadProgram, "passTexture"), 0);
 	static const GLfloat quad[] = {
@@ -161,7 +220,7 @@ void Graphics::setLight(){
 	glViewport(0,0,800,800);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glUseProgram(shadowProgram);
-
+	glEnable(GL_DEPTH_TEST);
 	GLint depthMVPpos = glGetUniformLocation(shadowProgram, "depthMVP");
 	//don't forget to change the function in the program!!!!!!
 	//in the fragment shader bro
@@ -182,9 +241,9 @@ void Graphics::setLight(){
 
 void Graphics::update(){
 	glUseProgram(mainProg);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, texFramebuffer);
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	glEnable(GL_DEPTH_TEST);
 	glViewport(0,0,800,600);
 
 	GLint MVPloc = glGetUniformLocation(mainProg, "MVP");
@@ -224,29 +283,29 @@ void Graphics::update(){
 
 			//No ambient texture? use diffuse instead
 			glActiveTexture(GL_TEXTURE0);
-			if(currMat->map_Ka !=0)
+			if(currMat->map_Ka)
 				glBindTexture(GL_TEXTURE_2D, currMat->map_Ka);
-			else if(currMat->map_Kd !=0)
+			else if(currMat->map_Kd)
 				glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
 			else
 				glBindTexture(GL_TEXTURE_2D, whiteTex);
 
 			glActiveTexture(GL_TEXTURE1);
-			if(currMat->map_Kd !=0)
+			if(currMat->map_Kd)
 				glBindTexture(GL_TEXTURE_2D, currMat->map_Kd);
 			else
 				glBindTexture(GL_TEXTURE_2D, whiteTex);
 
 			//no textures? use white instead
 			glActiveTexture(GL_TEXTURE3);
-			if(currMat->map_d !=0)
+			if(currMat->map_d)
 				glBindTexture(GL_TEXTURE_2D, currMat->map_d);
 			else
 				glBindTexture(GL_TEXTURE_2D, whiteTex);
 
 			//no bump map? use 127,255,127 instead (0,1,0)
 			glActiveTexture(GL_TEXTURE4);
-			if(currMat->map_bump!=0)
+			if(currMat->map_bump)
 				glBindTexture(GL_TEXTURE_2D, currMat->map_bump);
 			else
 				glBindTexture(GL_TEXTURE_2D, blueTex);
@@ -263,6 +322,17 @@ void Graphics::update(){
 		}
 	}
 
+	glUseProgram(colorProg);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDisable(GL_DEPTH_TEST);
+	//glClear(GL_COLOR_BUFFER_BIT);
+	glBindVertexArray(texVAO);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, asciiTexture);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	glfwPollEvents();
 	glfwSwapBuffers(window);

@@ -23,6 +23,10 @@ class Graphics{
 	void setupMainProg(string, string);
 	void setupShadowProg(string, string);
 	//void setupQuadProg(string, string);
+
+	//Testing stuff below:
+	GLuint texFramebuffer, texColorBuffer,colorProg,texBuffer, texVAO, colorDepthBuffer,asciiTexture;
+	void setupColorProg(string, string);
 public:
 	Graphics();
 	~Graphics();

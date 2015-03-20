@@ -62,7 +62,7 @@ void main(){
 	cosAlpha = pow(cosAlpha,shineFactor);
 	cosAlpha = cosTheta==0?0:cosAlpha;
 
-	float lightPower = 3;
+	float lightPower = 50;
 	vec3 lightVec = lightPos-PositionWorldSpace;
 	//float attenIntensity = 1;
 	float attenIntensity = 1/(1.0 +dot(lightVec, lightVec));
