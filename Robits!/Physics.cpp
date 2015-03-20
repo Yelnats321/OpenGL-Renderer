@@ -72,18 +72,20 @@ void Physics::loadRepX(string name, PxCollection * buffer, PxCollection * scene,
 }
 
 void Physics::update(){
-	pxScene->simulate(Settings::Timestep);
-	pxScene->fetchResults(true);
+	if(Settings::EnablePhysics){
+		pxScene->simulate(Settings::Timestep);
+		pxScene->fetchResults(true);
 
-	PxU32 nbActiveTransforms;
-	PxActiveTransform* activeTransforms = pxScene->getActiveTransforms(nbActiveTransforms);
-	// update each render object with the new transform
-	//std::cout << nbActiveTransforms<<std::endl;
-	for (PxU32 i=0; i < nbActiveTransforms; ++i)
-	{
-		if(activeTransforms[i].userData != NULL){
-			Model* model = static_cast<Model*>(activeTransforms[i].userData);
-			model->setTransform(activeTransforms[i].actor2World);
+		PxU32 nbActiveTransforms;
+		PxActiveTransform* activeTransforms = pxScene->getActiveTransforms(nbActiveTransforms);
+		// update each render object with the new transform
+		//std::cout << nbActiveTransforms<<std::endl;
+		for(PxU32 i = 0; i < nbActiveTransforms; ++i)
+		{
+			if(activeTransforms[i].userData != NULL){
+				Model* model = static_cast<Model*>(activeTransforms[i].userData);
+				model->setTransform(activeTransforms[i].actor2World);
+			}
 		}
 	}
 }

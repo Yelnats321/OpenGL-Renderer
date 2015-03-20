@@ -72,12 +72,30 @@ void Player::update(std::array<bool, 8> & keys, float x, float y, float deltaTim
 		cos(horizontalAngle)
 		);
 
-	glm::vec3 up = glm::cross( right, direction );
-	PxExtendedVec3 physPos = controller->getPosition();
-	//PxVec3 physPos = physBody->getGlobalPose().p;
-	camPosition = ptog(physPos);
-	camPosition.y += 0.875;
+	glm::vec3 up = glm::cross( right, direction );	if(Settings::EnablePhysics){
+		PxExtendedVec3 physPos = controller->getPosition();
+		//PxVec3 physPos = physBody->getGlobalPose().p;
+		camPosition = ptog(physPos);
 
+		camPosition.y += 0.875;
+	}
+	else{
+		if(keys[0]){
+			camPosition += forward * deltaTime * Settings::Speed;
+		}
+		// Move backward
+		if(keys[1]){
+			camPosition -= forward * deltaTime * Settings::Speed;
+		}
+		// Strafe right
+		if(keys[2]){
+			camPosition += right * deltaTime * Settings::Speed;
+		}
+		// Strafe left
+		if(keys[3]){
+			camPosition -= right * deltaTime * Settings::Speed;
+		}		if(keys[4]){			camPosition += glm::vec3(0, 1, 0)*deltaTime *Settings::Speed;		}		if(keys[5]){			camPosition -= glm::vec3(0, 1, 0)*deltaTime *Settings::Speed;		}
+	}
 	float forw = 0, righ = 0;
 	// Move forward
 	if (keys[0]){
@@ -103,51 +121,52 @@ void Player::update(std::array<bool, 8> & keys, float x, float y, float deltaTim
 		forw -= right.z;
 		righ -= right.x;
 	}	/*if(keys[4]){	camPosition += glm::vec3(0,1,0)*deltaTime *Settings::Speed;	}	if(keys[5]){	camPosition -= glm::vec3(0,1,0)*deltaTime *Settings::Speed;	}*/
-
-	PxControllerState state;
-	controller->getState(state);
-	bool grounded = (state.collisionFlags & PxControllerFlag::eCOLLISION_DOWN);
-	if(keys[7]){
-		/*physics.getScene()->removeActor(*controller->getActor());
-		//physBody->addForce(PxVec3(0, 100,0));
-		PxSweepHit hitInfo;
-		PxVec3 centerPos;
-		centerPos.x = controller->getPosition().x;
-		centerPos.y = controller->getPosition().y;
-		centerPos.z = controller->getPosition().z;
-		/*PxVec3 botPos;
-		botPos.x = controller->getFootPosition().x;
-		botPos.y = controller->getFootPosition().y-controller->getContactOffset();
-		botPos.z = controller->getFootPosition().z;
-		PxVec3 topPos(centerPos);
-		topPos.y = topPos.y + (centerPos.y-botPos.y);*/
-		/*bool blockingHit;
-		const PxU32 bufferSize = 256;
-		PxSweepHit hitBuffer[bufferSize];
-		PxI32 nbHits = physics.getScene()->sweepMultiple(PxCapsuleGeometry(0.25+controller->getContactOffset(), 1.25/2), PxTransform(centerPos), PxVec3(0,-1,0), 0.1, PxSceneQueryFlags(PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eINITIAL_OVERLAP_KEEP),
+	if(Settings::EnablePhysics){
+		PxControllerState state;
+		controller->getState(state);
+		bool grounded = (state.collisionFlags & PxControllerFlag::eCOLLISION_DOWN);
+		if(keys[7]){
+			/*physics.getScene()->removeActor(*controller->getActor());
+			//physBody->addForce(PxVec3(0, 100,0));
+			PxSweepHit hitInfo;
+			PxVec3 centerPos;
+			centerPos.x = controller->getPosition().x;
+			centerPos.y = controller->getPosition().y;
+			centerPos.z = controller->getPosition().z;
+			/*PxVec3 botPos;
+			botPos.x = controller->getFootPosition().x;
+			botPos.y = controller->getFootPosition().y-controller->getContactOffset();
+			botPos.z = controller->getFootPosition().z;
+			PxVec3 topPos(centerPos);
+			topPos.y = topPos.y + (centerPos.y-botPos.y);*/
+			/*bool blockingHit;
+			const PxU32 bufferSize = 256;
+			PxSweepHit hitBuffer[bufferSize];
+			PxI32 nbHits = physics.getScene()->sweepMultiple(PxCapsuleGeometry(0.25+controller->getContactOffset(), 1.25/2), PxTransform(centerPos), PxVec3(0,-1,0), 0.1, PxSceneQueryFlags(PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eINITIAL_OVERLAP_KEEP),
 			hitBuffer, bufferSize, blockingHit);
-		std::cout << nbHits << " " <<blockingHit<< " ASDSADASDAS DSAD "<<std::endl;*/
-		//bool gotHit = physics.getScene()->sweepSingle(PxCapsuleGeometry(0.25+controller->getContactOffset(), 1.25/2), PxTransform(centerPos),-controller->getUpDirection(), 0.1, PxSceneQueryFlags(PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eINITIAL_OVERLAP_KEEP|PxSceneQueryFlag::eNORMAL), hitInfo);
-		//bool gotHit = physics.getScene()->sweepSingle(PxCapsuleGeometry(0.25, 1.25), PxTransform(centerPos),PxVec3(0,-1,0), controller->getContactOffset(), PxSceneQueryFlags(), hitInfo);
-		if(grounded){
-			gravity = 20*Settings::Timestep;
-			std::cout << "Ray charles came back true "<<std::endl;
+			std::cout << nbHits << " " <<blockingHit<< " ASDSADASDAS DSAD "<<std::endl;*/
+			//bool gotHit = physics.getScene()->sweepSingle(PxCapsuleGeometry(0.25+controller->getContactOffset(), 1.25/2), PxTransform(centerPos),-controller->getUpDirection(), 0.1, PxSceneQueryFlags(PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eINITIAL_OVERLAP_KEEP|PxSceneQueryFlag::eNORMAL), hitInfo);
+			//bool gotHit = physics.getScene()->sweepSingle(PxCapsuleGeometry(0.25, 1.25), PxTransform(centerPos),PxVec3(0,-1,0), controller->getContactOffset(), PxSceneQueryFlags(), hitInfo);
+			if(grounded){
+				gravity = 20 * Settings::Timestep;
+				std::cout << "Ray charles came back true " << std::endl;
+			}
+			//physics.getScene()->addActor(*controller->getActor());
 		}
-		//physics.getScene()->addActor(*controller->getActor());
-	}
-	forw *= Settings::Speed * Settings::Timestep;
-	righ *= Settings::Speed * Settings::Timestep;
-	if(!grounded){
-		gravity += physics.getScene()->getGravity().y*Settings::Timestep/10;
-		if(gravity < -20*Settings::Timestep){
-			gravity = -20 * Settings::Timestep;
+		forw *= Settings::Speed * Settings::Timestep;
+		righ *= Settings::Speed * Settings::Timestep;
+		if(!grounded){
+			gravity += physics.getScene()->getGravity().y*Settings::Timestep / 10;
+			if(gravity < -20 * Settings::Timestep){
+				gravity = -20 * Settings::Timestep;
+			}
 		}
+		else if(gravity < 0)
+			gravity = 0;
+		//physBody->addForce(PxVec3(righ, 0, forw));
+		//POSSIBLY REMOVE DELTA TIME IN FAVOR OF THE TIEMSTEP THING????????
+		controller->move(PxVec3(righ, gravity, forw), Settings::MinMoveDist, deltaTime, NULL);
 	}
-	else if(gravity <0)
-		gravity = 0;
-	//physBody->addForce(PxVec3(righ, 0, forw));
-	//POSSIBLY REMOVE DELTA TIME IN FAVOR OF THE TIEMSTEP THING????????
-	controller->move(PxVec3(righ, gravity, forw), Settings::MinMoveDist, deltaTime, NULL);
 
 
 	if(keys[6]){

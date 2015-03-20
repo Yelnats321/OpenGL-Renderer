@@ -3,7 +3,7 @@
 #include "Player.h"
 #include "Settings.h"
 
-void updateInput(Player & player, GLFWwindow * window, vector<PxRigidDynamic *> & rigids){
+void updateInput(Player & player, GLFWwindow * window/*, vector<PxRigidDynamic *> & rigids*/){
 	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, 1);
 
@@ -43,7 +43,7 @@ void updateInput(Player & player, GLFWwindow * window, vector<PxRigidDynamic *> 
 	//should this be a thing?
 	player.update(keys, float(800/2 - xpos), float(600/2 - ypos), Settings::Timestep);
 
-	if(glfwGetKey(window, GLFW_KEY_RIGHT)==GLFW_PRESS){
+	/*if(glfwGetKey(window, GLFW_KEY_RIGHT)==GLFW_PRESS){
 		for(const auto & i:rigids){
 			PxTransform tr = i->getGlobalPose();
 			tr.p.x +=10*Settings::Timestep;
@@ -64,5 +64,5 @@ void updateInput(Player & player, GLFWwindow * window, vector<PxRigidDynamic *> 
 	if(glfwGetKey(window, GLFW_KEY_DOWN)==GLFW_PRESS){
 		for(const auto & i:rigids){
 		}
-	}
+	}*/
 }

@@ -12,12 +12,11 @@ int main(){
 	Graphics graphics;
 	Player player(graphics, physics);
 	graphics.setPlayer(&player);
-
 	/*Model * dragon = graphics.addModel("sponza-x\\sponza.obj");
 	dragon->setScale(0.001, 0.001, 0.001);*/
-	//graphics.addStaticModel("sponza-x/sponza.obj");
+	graphics.addStaticModel("sponza-x/sponza.obj");
 	//graphics.addDynamicModel("assets/contraption.obj", physics);
-	auto rigids = graphics.addBus("assets/contraption.obj", physics);
+	//auto rigids = graphics.addBus("assets/contraption.obj", physics);
 	//floor2->setPosition(0,5,0);
 	double lastTime = glfwGetTime();
 	double acumulator = 0.0;
@@ -29,7 +28,7 @@ int main(){
 		int steps = 0;
 		while(acumulator >= Settings::Timestep){
 			acumulator -= Settings::Timestep;
-			updateInput(player, graphics.getWindow(), rigids);
+			updateInput(player, graphics.getWindow()/*, rigids*/);
 			physics.update();
 			++steps;
 		}

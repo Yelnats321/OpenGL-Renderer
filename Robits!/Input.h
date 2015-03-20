@@ -2,4 +2,4 @@
 
 class Player;
 
-void updateInput(Player &, GLFWwindow *, vector<PxRigidDynamic *> &);
+void updateInput(Player &, GLFWwindow */*, vector<PxRigidDynamic *> &*/);
