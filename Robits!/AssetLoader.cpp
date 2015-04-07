@@ -112,25 +112,20 @@ map<string, Material> loadMaterialLibrary(string name){
 	std::cout << "-Loading the material library " + name<<std::endl;
 	map<string, Material> mats;
 
-	std::ifstream file;
-	file.open(name);
+	std::ifstream file(name, std::ios::in);
 	if(file.fail()){
 		std::cout << "***Error reading materials file";
 		return mats;
 	}
-	vector<string> line;
-	string buf;
-	while(!file.eof()){
-		std::getline(file, buf);
-		line.emplace_back(std::move(buf));
-	}
-	file.close();
+
 	Material * currMat = nullptr;
 
-	for(const auto & itr:line){
+	string line;
+	std::istringstream ss;
+	while(std::getline(file, line)){
+		std::istringstream ss(std::move(line));
 		string key;
-		std::istringstream ss(itr);
-		ss >> std::ws>> key >> std::ws;
+		ss >> key;
 
 		if(key.length() == 0)
 			continue;
@@ -168,7 +163,7 @@ map<string, Material> loadMaterialLibrary(string name){
 		else if(key == "Tf" || key == "Ka" || key == "Kd" || key == "Ks"){
 			float a, b, c;
 			a = b=c=0;
-			ss >> a >> std::ws>>b>>std::ws>>c;		
+			ss >> a >> b>> c;		
 
 			if(key == "Tf"){
 				currMat->Tf[0] = a;
@@ -217,7 +212,7 @@ map<string, Material> loadMaterialLibrary(string name){
 		}
 
 		else{
-			std::cout << itr<<std::endl;
+			std::cout << ss.str()<<std::endl;
 		}
 	}
 
@@ -257,24 +252,17 @@ bool parseObj(string name, vector<glm::vec3> & positions, vector<glm::vec2> & te
 			  vector<std::pair<string, int> > & matCalls, map<string, Material> & matLib, 
 			  vector<std::pair<string, int> > & groups){
 	std::cout<<"Loading file " + name<<std::endl;
-	std::ifstream file;
-	file.open(name);
+	std::ifstream file(name, std::ios::in);
 	if(file.fail()){
 		std::cout << "Error reading file "+ name << std::endl;;
 		return false;
 	}
-	vector<string> line;
-	string buf;
-	while(!file.eof()){
-		std::getline(file, buf);
-		line.emplace_back(std::move(buf));
-	}
-	file.close();
 
-	for(const auto & itr : line){
+	string line;
+	while(std::getline(file, line)){
+		std::istringstream ss(std::move(line));
 		string key;
-		std::istringstream ss(itr);
-		ss >> std::ws>> key >> std::ws;
+		ss >> key;
 
 		if(key.length() == 0)
 			continue;
@@ -284,7 +272,7 @@ bool parseObj(string name, vector<glm::vec3> & positions, vector<glm::vec2> & te
 
 		if(key == "v" || key == "vt" || key == "vn"){
 			float x, y, z;
-			ss >> x >> std::ws>> y>>std::ws>> z;
+			ss >> x >> y>> z;
 			if(key=="v")
 				positions.emplace_back(x,y,z);
 			else if(key=="vt")
