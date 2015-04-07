@@ -1,0 +1,13 @@
+Debug/
+Release/
+ipch/
+Robits!/Debug/
+Robits!/Release/
+*.sln
+*.vspx
+*.suo
+*.psess
+*.opensdf
+*.sdf
+*.vcxproj.filters
+*.vcxproj.user

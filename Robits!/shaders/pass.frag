@@ -24,5 +24,8 @@ void main(){
 	//color = vec3(nUV,0);
 	color = texture(asciiTexture,asciiUV).rgb*texture(passTexture,nUV).rgb;
 	//MATRIX MODE
-	color = texture(asciiTexture,asciiUV).rgb*dot(texture(passTexture,nUV).rgb,vec3(0.212,0.715,0.072))*vec3(0,204/255.f,0);
+	//color = texture(asciiTexture,asciiUV).rgb*dot(texture(passTexture,nUV).rgb,vec3(0.212,0.715,0.072))*vec3(0,204/255.f,0);
+
+	//Normal
+	color = texture(passTexture,UV).rgb;
 }	
