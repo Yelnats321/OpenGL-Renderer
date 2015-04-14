@@ -13,9 +13,9 @@ extern "C"{
 #include "Mesh.h"
 #include "ObjFile.h"
 
-map<string, GLuint> textures;
+unordered_map<string, GLuint> textures;
 
-map<string, unique_ptr<ObjFile> > files;
+unordered_map<string, unique_ptr<ObjFile> > files;
 
 GLuint genShaders(string vert, string frag){
 	std::ifstream file;
@@ -108,9 +108,9 @@ void locationAppend(string origin, string & file){
 }
 
 //remember to extract curr location 
-map<string, Material> loadMaterialLibrary(string name){
+unordered_map<string, Material> loadMaterialLibrary(string name){
 	std::cout << "-Loading the material library " + name<<std::endl;
-	map<string, Material> mats;
+	unordered_map<string, Material> mats;
 
 	std::ifstream file(name, std::ios::in);
 	if(file.fail()){
@@ -249,7 +249,7 @@ GLuint addCache(bm_type & vertexCache, GLuint a, GLuint b, GLuint c){
 
 bool parseObj(string name, vector<glm::vec3> & positions, vector<glm::vec2> & textures, vector<glm::vec3> & normals, 
 			  bm_type & vertexCache, vector<GLuint> & elements,
-			  vector<std::pair<string, int> > & matCalls, map<string, Material> & matLib, 
+			  vector<std::pair<string, int> > & matCalls, unordered_map<string, Material> & matLib,
 			  vector<std::pair<string, int> > & groups){
 	std::cout<<"Loading file " + name<<std::endl;
 	std::ifstream file(name, std::ios::in);
@@ -294,7 +294,9 @@ bool parseObj(string name, vector<glm::vec3> & positions, vector<glm::vec2> & te
 			string matName;
 			ss >> matName;
 			locationAppend(name, matName);
+			std::cout << "Started mat lib load " << glfwGetTime() << "\n";
 			matLib = std::move(loadMaterialLibrary(matName));
+			std::cout << "Ended mat lib load " << glfwGetTime() << "\n";
 		}
 
 		else if(key == "usemtl"){
@@ -424,7 +426,7 @@ const ObjFile * loadFile(string name){
 	boost::bimap<VertexData, GLuint> vertexCache;
 	vector<std::pair<string, int> > groups;
 	vector<std::pair<string, int> > masterMatCalls;
-	map<string, Material>matLib;
+	unordered_map<string, Material>matLib;
 	if(!parseObj(name, positions, textures, normals, vertexCache, elements, masterMatCalls, matLib, groups))
 		return nullptr;
 

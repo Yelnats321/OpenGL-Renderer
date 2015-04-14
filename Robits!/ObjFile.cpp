@@ -3,7 +3,7 @@
 #include "Material.h"
 #include "Mesh.h"
 
-ObjFile::ObjFile( GLuint b, bool t, map<string, Material> && mL)
+ObjFile::ObjFile(GLuint b, bool t, unordered_map<string, Material> && mL)
 	: vbo(b), textures(t), matLib(std::move(mL)){
 }
 
@@ -23,4 +23,4 @@ const Material * ObjFile::getMaterial(string name)const{
 }
 
 const bool ObjFile::useTextures() const{return textures;}
-const map<string, unique_ptr<Mesh>> & ObjFile::getMeshes() const{return meshes;}
+const unordered_map<string, unique_ptr<Mesh>> & ObjFile::getMeshes() const{ return meshes; }

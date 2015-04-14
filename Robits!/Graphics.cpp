@@ -349,7 +349,7 @@ void Graphics::addStaticModel(string name){
 
 vector<PxRigidDynamic *> Graphics::addBus(string name, Physics & physics){
 	const ObjFile * file = loadFile(name);
-	map<string, Model*> newmods;
+	unordered_map<string, Model*> newmods;
 	for(const auto & i:file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
 		//newmods.emplace(i.first, mod);
@@ -398,7 +398,7 @@ vector<PxRigidDynamic *> Graphics::addBus(string name, Physics & physics){
 
 void Graphics::addDynamicModel(string name, Physics & physics){
 	const ObjFile * file = loadFile(name);
-	map<string, Model*> newmods;
+	unordered_map<string, Model*> newmods;
 	for(const auto & i:file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
 		//newmods.emplace(i.first, mod);
