@@ -121,7 +121,6 @@ unordered_map<string, Material> loadMaterialLibrary(string name){
 	Material * currMat = nullptr;
 
 	string line;
-	std::istringstream ss;
 	while(std::getline(file, line)){
 		std::istringstream ss(std::move(line));
 		string key;
