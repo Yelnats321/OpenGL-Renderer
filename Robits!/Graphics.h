@@ -1,4 +1,5 @@
 #pragma once
+#include "OGLWrapper.h"
 class Model;
 class Player;
 class Physics;
@@ -10,10 +11,14 @@ class Graphics{
 
 	//Texture shit
 	//GLuint quadBuffer, quadProgram, quadVAO;
-	GLuint framebuffer, renderbuffer, shadowProgram, shadowTexture;
+
+	GLuint shadowProgram;
+	gl::Framebuffer framebuffer;
+	gl::Texture shadowTexture;
+
 	glm::mat4 sideViews[6];
 
-	GLuint whiteTex, blueTex;
+	gl::Texture whiteTex, blueTex;
 
 	glm::mat4 proj;
 
@@ -25,7 +30,13 @@ class Graphics{
 	//void setupQuadProg(string, string);
 
 	//Testing stuff below:
-	GLuint texFramebuffer, texColorBuffer,colorProg,texBuffer, texVAO, colorDepthBuffer,asciiTexture;
+	GLuint colorProg;
+	gl::VAO texVAO;
+	gl::Buffer texBuffer;
+	gl::Framebuffer texFramebuffer;
+	gl::Renderbuffer colorDepthBuffer;
+	gl::Texture colorTexture, asciiTexture;	
+
 	void setupColorProg(string, string);
 public:
 	Graphics();

@@ -238,7 +238,7 @@ typedef boost::bimap<VertexData, GLuint> bm_type;
 typedef bm_type::value_type bm_value;
 
 GLuint addCache(bm_type & vertexCache, GLuint a, GLuint b, GLuint c){
-	const auto && it = vertexCache.left.find(VertexData(a, b, c));
+	const auto & it = vertexCache.left.find(VertexData(a, b, c));
 	if(it != vertexCache.left.end()){
 		return it->second;
 	}

@@ -44,24 +44,12 @@ Graphics::Graphics(){    glfwInit();
 
 Graphics::~Graphics(){
 	glDeleteProgram(shadowProgram);
-	glDeleteRenderbuffers(1, &renderbuffer);
-	glDeleteTextures(1, &shadowTexture);
-	glDeleteFramebuffers(1, &framebuffer);
 
 	/*glDeleteProgram(quadProgram);
 	glDeleteBuffers(1, &quadBuffer);
 	glDeleteVertexArrays(1, &quadVAO);*/
 
 	glDeleteProgram(colorProg);
-	glDeleteRenderbuffers(1,&colorDepthBuffer);
-	glDeleteTextures(1, &asciiTexture);
-	glDeleteTextures(1, &texColorBuffer);
-	glDeleteFramebuffers(1, &texFramebuffer);
-	glDeleteBuffers(1, &texBuffer);
-	glDeleteVertexArrays(1, &texVAO);
-
-	glDeleteTextures(1, &whiteTex);
-	glDeleteTextures(1, &blueTex);
 
 	glDeleteProgram(mainProg);
 
@@ -98,10 +86,10 @@ void Graphics::setupMainProg(string v, string f){
 
 void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(v, f);
 
-	framebuffer = 0;
-	glGenFramebuffers(1, &framebuffer);
+	framebuffer.gen();
+
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	glGenTextures(1, &shadowTexture);
+	shadowTexture.gen();
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
 	for(int i = 0; i < 6; i++){
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i	, 0,GL_DEPTH_COMPONENT16, 800, 800, 0,GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
@@ -135,13 +123,6 @@ void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(
 	//needed for use of shadow cubemap
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-	//glDrawBuffer(GL_NONE);
-	/*glGenRenderbuffers(1, &renderbuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 800);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);
-	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "Frame buffer dun goofed "<<glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;*/
 }
 
 void Graphics::setupColorProg(string v, string f){
@@ -150,11 +131,10 @@ void Graphics::setupColorProg(string v, string f){
 	asciiTexture = loadTexture("assets/charMap.png", false, false);
 	glUniform1i(glGetUniformLocation(colorProg, "asciiTexture"), 1);
 
-	glGenFramebuffers(1, &texFramebuffer);
+	texFramebuffer.gen();
 	glBindFramebuffer(GL_FRAMEBUFFER, texFramebuffer);
-	glGenTextures(1, &texColorBuffer);
-	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-
+	colorTexture.gen();
+	glBindTexture(GL_TEXTURE_2D, colorTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -162,10 +142,10 @@ void Graphics::setupColorProg(string v, string f){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 	glFramebufferTexture2D(
-		GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0
+		GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0
 		);
 
-	glGenRenderbuffers(1, &colorDepthBuffer);
+	colorDepthBuffer.gen();
 	glBindRenderbuffer(GL_RENDERBUFFER, colorDepthBuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 600);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, colorDepthBuffer);
@@ -183,10 +163,10 @@ void Graphics::setupColorProg(string v, string f){
 		1.0f, 1.0f, 0.0f,
 	};
 
-	glGenVertexArrays(1, &texVAO);
+	texVAO.gen();
 	glBindVertexArray(texVAO);
 
-	glGenBuffers(1, &texBuffer);
+	texBuffer.gen();
 	glBindBuffer(GL_ARRAY_BUFFER, texBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
 
@@ -266,6 +246,7 @@ void Graphics::update(){
 		std::cout << matrix[2][0] << " " << matrix[2][1] << " " << matrix[2][2] << " " <<matrix[2][3] << std::endl;
 		std::cout << matrix[3][0] << " " << matrix[3][1] << " " << matrix[3][2] << " " <<matrix[3][3] << std::endl;
 		std::cout << std::endl;*/
+
 		auto mesh = i->getMesh();
 		glUniformMatrix4fv(viewPos, 1, GL_FALSE, glm::value_ptr(player->getCameraMatrix()));
 		glUniformMatrix4fv(MVPloc, 1, GL_FALSE, glm::value_ptr(matrix));
@@ -273,7 +254,7 @@ void Graphics::update(){
 		glUniform1f(toggleTextures, mesh->file->useTextures());
 		glBindVertexArray(mesh->vao);
 		//loop through all the material calls
-		for(auto & mats = mesh->matCalls.begin(); mats != mesh->matCalls.end(); ++mats){
+		for(auto mats = mesh->matCalls.begin(); mats != mesh->matCalls.end(); ++mats){
 			//bind the material data
 			const Material * currMat = mesh->file->getMaterial(mats->first);
 			glUniform3f(ambColor, currMat->Ka[0], currMat->Ka[1], currMat->Ka[2]);
@@ -330,7 +311,7 @@ void Graphics::update(){
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, asciiTexture);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, colorTexture);
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 

@@ -103,6 +103,7 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="ObjFile.h" />
+    <ClInclude Include="OGLWrapper.h" />
     <ClInclude Include="Physics.h" />
     <ClInclude Include="PhysXGLMHelper.h" />
     <ClInclude Include="Player.h" />
