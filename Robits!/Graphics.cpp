@@ -2,7 +2,7 @@
 #include "Graphics.h"
 #include "Model.h"
 #include "Material.h"
-#include "AssetLoader.h"
+#include "OGLWrapper.h"
 #include "Settings.h"
 #include "Player.h"
 
@@ -40,6 +40,7 @@ Graphics::Graphics(){    glfwInit();
 	setupShadowProg("shaders/passShadow.vert","shaders/passShadow.frag");
 	//setupQuadProg("shaders/pass.vert", "shaders/pass.frag");
 	setupColorProg("shaders/pass.vert", "shaders/pass.frag");
+	setupVoxelProg("shaders/voxel.vert", "shaders/voxel.frag", "shaders/voxel.geo");
 }
 
 Graphics::~Graphics(){
@@ -58,7 +59,7 @@ Graphics::~Graphics(){
 }
 
 void Graphics::setupMainProg(string v, string f){
-	mainProg = genShaders(v,f);
+	mainProg.gen(v,f);
 
 	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.01f, 50.0f );
 	glUseProgram(mainProg);
@@ -80,11 +81,11 @@ void Graphics::setupMainProg(string v, string f){
 	glUniform1i(glGetUniformLocation(mainProg, "normalMap"), 4);
 	glUniform1i(glGetUniformLocation(mainProg, "shadowMap"), 5);
 
-	whiteTex = loadTexture("assets/white.bmp");
-	blueTex = loadTexture("assets/blue.bmp");
+	whiteTex.gen("assets/white.bmp");
+	blueTex.gen("assets/blue.bmp");
 }
 
-void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(v, f);
+void Graphics::setupShadowProg(string v, string f){	shadowProgram.gen(v, f);
 
 	framebuffer.gen();
 
@@ -126,9 +127,9 @@ void Graphics::setupShadowProg(string v, string f){	shadowProgram = genShaders(
 }
 
 void Graphics::setupColorProg(string v, string f){
-	colorProg = genShaders(v, f);
+	colorProg.gen(v, f);
 	glUseProgram(colorProg);
-	asciiTexture = loadTexture("assets/charMap.png", false, false);
+	asciiTexture.gen("assets/charMap.png", false, false);
 	glUniform1i(glGetUniformLocation(colorProg, "asciiTexture"), 1);
 
 	texFramebuffer.gen();
@@ -174,6 +175,20 @@ void Graphics::setupColorProg(string v, string f){
 	glEnableVertexAttribArray(0);
 	
 }
+
+void Graphics::setupVoxelProg(string v, string f, string g){
+	voxelProg.gen(v, f, g);
+
+	voxelTexture.gen();
+	glBindTexture(GL_TEXTURE_3D, voxelTexture);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, VoxelSize, VoxelSize, VoxelSize, 0, GL_RED, GL_UNSIGNED_BYTE, voxelData);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	voxelFramebuffer.gen();
+	glBindFramebuffer(GL_FRAMEBUFFER, voxelFramebuffer);
+}
+
 /*void Graphics::setupQuadProg(string v, string f){
 	quadProgram = genShaders(v,f);	glUseProgram(quadProgram);	glUniform1f(glGetUniformLocation(quadProgram, "passTexture"), 0);
 	static const GLfloat quad[] = {
@@ -319,7 +334,7 @@ void Graphics::update(){
 	glfwSwapBuffers(window);
 }
 void Graphics::addStaticModel(string name){
-	const ObjFile * file = loadFile(name);
+	const ObjFile * file = gl::loadFile(name);
 	for(const auto & i:file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
 		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
@@ -329,7 +344,7 @@ void Graphics::addStaticModel(string name){
 }
 
 vector<PxRigidDynamic *> Graphics::addBus(string name, Physics & physics){
-	const ObjFile * file = loadFile(name);
+	const ObjFile * file = gl::loadFile(name);
 	unordered_map<string, Model*> newmods;
 	for(const auto & i:file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
@@ -378,7 +393,7 @@ vector<PxRigidDynamic *> Graphics::addBus(string name, Physics & physics){
 }
 
 void Graphics::addDynamicModel(string name, Physics & physics){
-	const ObjFile * file = loadFile(name);
+	const ObjFile * file = gl::loadFile(name);
 	unordered_map<string, Model*> newmods;
 	for(const auto & i:file->getMeshes()){
 		//Model * mod = new Model(i.second.get());

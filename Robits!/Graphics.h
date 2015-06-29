@@ -7,12 +7,12 @@ class Physics;
 class Graphics{
 	vector<unique_ptr<Model>> models;
 
-	GLuint mainProg;
+	gl::Program mainProg;
 
 	//Texture shit
 	//GLuint quadBuffer, quadProgram, quadVAO;
 
-	GLuint shadowProgram;
+	gl::Program shadowProgram;
 	gl::Framebuffer framebuffer;
 	gl::Texture shadowTexture;
 
@@ -30,7 +30,7 @@ class Graphics{
 	//void setupQuadProg(string, string);
 
 	//Testing stuff below:
-	GLuint colorProg;
+	gl::Program colorProg;
 	gl::VAO texVAO;
 	gl::Buffer texBuffer;
 	gl::Framebuffer texFramebuffer;
@@ -38,6 +38,17 @@ class Graphics{
 	gl::Texture colorTexture, asciiTexture;	
 
 	void setupColorProg(string, string);
+
+	//Voxel stuff
+	static const GLuint VoxelSize = 32;
+	gl::Program voxelProg;
+	gl::Texture voxelTexture;
+	gl::Framebuffer voxelFramebuffer;
+	unsigned char voxelData[VoxelSize*VoxelSize * VoxelSize];
+
+	void setupVoxelProg(string, string, string);
+	void genVoxel();
+	void renderVoxel();
 public:
 	Graphics();
 	~Graphics();

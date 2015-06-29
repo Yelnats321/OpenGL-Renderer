@@ -80,13 +80,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AssetLoader.cpp" />
+    <ClCompile Include="FileManager.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="ObjFile.cpp" />
+    <ClCompile Include="OGLWrapper.cpp" />
     <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Settings.cpp" />
@@ -96,8 +97,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AssetLoader.h" />
     <ClInclude Include="Graphics.h" />
+    <ClInclude Include="FileManager.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />

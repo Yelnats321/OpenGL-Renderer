@@ -1,6 +1,7 @@
 #pragma once
 #include <GL/glew.h>
 
+class ObjFile;
 namespace gl{
 /*
 using TBuilder = decltype(&glGenBuffers);
@@ -19,15 +20,14 @@ struct OGLWrapper{
 };*/
 
 template<class TB, TB TCons, class TF, TF TDes>
-struct OGLWrapper{
+class OGLWrapper{
 	GLuint data;
+public:
 	OGLWrapper():data(0){}
-	OGLWrapper(GLuint d):data(d){}
 	OGLWrapper(const OGLWrapper&) = delete;
 	OGLWrapper& operator=(const OGLWrapper&) = delete;
-	OGLWrapper& operator=(GLuint rhs){
-		data = rhs;
-		return *this;
+	OGLWrapper(OGLWrapper && rhs){
+		std::swap(data, rhs.data);
 	}
 	OGLWrapper& operator=(OGLWrapper&& rhs){
 		std::swap(data, rhs.data);
@@ -46,10 +46,38 @@ using VAO = OGLWrapper<decltype(&glGenVertexArrays), &glGenVertexArrays,
 	decltype(&glDeleteVertexArrays), &glDeleteVertexArrays>;
 using Buffer = OGLWrapper<decltype(&glGenBuffers), &glGenBuffers,
 	decltype(&glDeleteBuffers), &glDeleteBuffers>;
-using Texture = OGLWrapper<decltype(&glGenTextures), &glGenTextures,
-	decltype(&glDeleteTextures), &glDeleteTextures>;
 using Renderbuffer = OGLWrapper<decltype(&glGenRenderbuffers), &glGenRenderbuffers,
 	decltype(&glDeleteRenderbuffers), &glDeleteRenderbuffers>;
 using Framebuffer = OGLWrapper < decltype(&glGenFramebuffers), &glGenFramebuffers,
 	decltype(&glDeleteFramebuffers), &glDeleteFramebuffers >;
+
+class Program{
+	GLuint data;
+public:
+	Program():data(0){}
+	Program(Program &&);
+	Program(const Program&) = delete;
+	Program& operator=(const Program&) = delete;
+	Program& operator=(Program&& rhs);
+	void gen(string v, string f, string g = "");
+	~Program();
+	inline operator GLuint() const{ return data; }
+};
+
+struct Texture{
+	GLuint data;
+public:
+	Texture(const Texture&) = delete;
+	Texture& operator=(const Texture &) = delete;
+
+	~Texture();
+	Texture():data(0){}
+	Texture(Texture &&);
+	Texture& operator=(Texture && rhs);
+	void gen();
+	void gen(string, bool = false, bool = true);
+	inline operator GLuint() const{ return data; }
+};
+
+const ObjFile * loadFile(string);
 }
