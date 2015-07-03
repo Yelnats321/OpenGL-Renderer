@@ -40,7 +40,7 @@ class Graphics{
 	void setupColorProg(string, string);
 
 	//Voxel stuff
-	static const GLuint VoxelSize;
+	static const GLuint VoxelSize =128;
 	gl::Program voxelProg, voxelRenderProg;
 	gl::VAO voxelRenderVAO;
 	gl::Buffer voxelRenderBuffer;
