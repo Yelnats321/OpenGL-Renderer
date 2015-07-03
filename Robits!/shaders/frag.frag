@@ -28,7 +28,7 @@ float VectorToDepthValue(vec3 Vec){
     vec3 AbsVec = abs(Vec);
     float LocalZcomp = max(AbsVec.x, max(AbsVec.y, AbsVec.z));
 
-    const float f = 50.0;
+    const float f = 100.0;
     const float n = 0.1;
     float NormZComp = (f+n) / (f-n) - (2*f*n)/(f-n)/LocalZcomp;
     return (NormZComp + 1.0) * 0.5;

@@ -13,7 +13,7 @@ class Graphics{
 	//GLuint quadBuffer, quadProgram, quadVAO;
 
 	gl::Program shadowProgram;
-	gl::Framebuffer framebuffer;
+	gl::Framebuffer shadowFramebuffer;
 	gl::Texture shadowTexture;
 
 	glm::mat4 sideViews[6];
@@ -40,12 +40,13 @@ class Graphics{
 	void setupColorProg(string, string);
 
 	//Voxel stuff
-	static const GLuint VoxelSize = 32;
-	gl::Program voxelProg;
+	static const GLuint VoxelSize;
+	gl::Program voxelProg, voxelRenderProg;
+	gl::VAO voxelRenderVAO;
+	gl::Buffer voxelRenderBuffer;
 	gl::Texture voxelTexture;
-	gl::Framebuffer voxelFramebuffer;
-	unsigned char voxelData[VoxelSize*VoxelSize * VoxelSize];
-
+	glm::mat4 voxelLooks[3];
+	int voxelCount;
 	void setupVoxelProg(string, string, string);
 	void genVoxel();
 	void renderVoxel();

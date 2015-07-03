@@ -15,6 +15,8 @@ int main(){
 	/*Model * dragon = graphics.addModel("sponza-x\\sponza.obj");
 	dragon->setScale(0.001, 0.001, 0.001);*/
 	graphics.addStaticModel("sponza-x/sponza.obj");
+	//graphics.addStaticModel("assets/box.obj");
+
 	//graphics.addDynamicModel("assets/contraption.obj", physics);
 	//auto rigids = graphics.addBus("assets/contraption.obj", physics);
 	//floor2->setPosition(0,5,0);

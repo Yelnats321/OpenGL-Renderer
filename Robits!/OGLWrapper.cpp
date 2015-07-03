@@ -33,6 +33,25 @@ Program::~Program(){
 	glDeleteProgram(data);
 }
 
+void checkShader(const string & name, GLuint shader){
+	GLint status = 0;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	if(status){
+		std::cout << name << " compiled" << std::endl;
+	}
+	else{
+		std::cout << name << " compile error" << std::endl;
+		GLint length;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+		if(length){
+			GLint infoLength;
+			char* infoBuf = new char[length];
+			glGetShaderInfoLog(shader, length, &infoLength, infoBuf);
+			std::cout << infoBuf;
+			delete[] infoBuf;
+		}
+	}
+}
 
 void Program::gen(string vert, string frag, string geo){
 	std::ifstream file;
@@ -79,21 +98,15 @@ void Program::gen(string vert, string frag, string geo){
 	glShaderSource(fragShader, 1, &c_str2, NULL);
 	glCompileShader(fragShader);
 
-	GLint statusF, statusV;
-	glGetShaderiv(fragShader, GL_COMPILE_STATUS, &statusF);
-	glGetShaderiv(vertShader, GL_COMPILE_STATUS, &statusV);
-	std::cout << vert << " " << statusV << " " << frag << " " << statusF;
-
+	checkShader(vert, vertShader);
+	checkShader(frag, fragShader);
 	GLuint geoShader = 0;
 	if(!geo.empty()){
 		geoShader = glCreateShader(GL_GEOMETRY_SHADER);
 		const char *c_str3 = geometrySource.c_str();
 		glShaderSource(geoShader, 1, &c_str3, NULL);
 		glCompileShader(geoShader);
-
-		GLint statusG;
-		glGetShaderiv(geoShader, GL_COMPILE_STATUS, &statusG);
-		std::cout << " " << geo << " " << statusG;
+		checkShader(geo, geoShader);
 	}
 	endl(std::cout);
 	// Link the vertex and fragment shader into a shader program
@@ -139,8 +152,11 @@ void Texture::gen(string name, bool sRGB, bool mipmap){
 	if(sRGB)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	else
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+	if(mipmap)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 8);
+
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4.0f);
 	//TODO: this doesn't work on radeon cards maybe
@@ -599,7 +615,29 @@ const ObjFile * loadFile(string name){
 			glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, blockSize*sizeof(float), (void*)(sizeof(float) * 11));
 			glEnableVertexAttribArray(4);
 		}
-		objFile->addMesh(groups[j].first, std::make_unique<Mesh>(objFile, vao, ebo, nbGroupVertices, std::move(matCalls)));
+
+		auto x = std::min_element(std::begin(positions), std::end(positions), [](const glm::vec3 & f, const glm::vec3 & s){
+			return f.x < s.x;
+		});
+		auto y = std::min_element(std::begin(positions), std::end(positions), [](const glm::vec3 & f, const glm::vec3 & s){
+			return f.y < s.y;
+		});
+		auto z = std::min_element(std::begin(positions), std::end(positions), [](const glm::vec3 & f, const glm::vec3 & s){
+			return f.z < s.z;
+		});
+		auto minBounds = glm::vec3{x->x, y->y, z->z};
+		x = std::max_element(std::begin(positions), std::end(positions), [](const glm::vec3 & f, const glm::vec3 & s){
+			return f.x < s.x;
+		});
+		y = std::max_element(std::begin(positions), std::end(positions), [](const glm::vec3 & f, const glm::vec3 & s){
+			return f.y < s.y;
+		});
+		z = std::max_element(std::begin(positions), std::end(positions), [](const glm::vec3 & f, const glm::vec3 & s){
+			return f.z < s.z;
+		});
+
+		auto maxBounds = glm::vec3{x->x, y->y, z->z};
+		objFile->addMesh(groups[j].first, std::make_unique<Mesh>(objFile, vao, ebo, nbGroupVertices, std::move(matCalls), minBounds, maxBounds));
 	}
 	std::cout << glfwGetTime() << std::endl;
 	std::cout << " Stats " << std::endl

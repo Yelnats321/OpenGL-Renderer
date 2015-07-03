@@ -9,14 +9,14 @@
 #include "Physics.h"
 #include "ObjFile.h"
 #include "Mesh.h"
+const GLuint Graphics::VoxelSize = 256;
+Graphics::Graphics(){	glfwInit();
+	glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-Graphics::Graphics(){    glfwInit();
-	glfwWindowHint(GLFW_SAMPLES, 4); 
-	glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
-	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
-	glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
-
-	glfwWindowHint( GLFW_RESIZABLE, GL_FALSE );
+	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	window = glfwCreateWindow(800, 600, "OpenGL Window", 0, 0);
 
 	glfwMakeContextCurrent(window);
@@ -30,42 +30,32 @@ Graphics::Graphics(){    glfwInit();
 	glDepthFunc(GL_LESS);
 
 	glEnable(GL_FRAMEBUFFER_SRGB);
+	glClearColor(0.4f, 0.2f, 0.3f, 1.0f);
 
 	if(!Settings::Wireframe)
 		glEnable(GL_CULL_FACE);
 	glFrontFace(GL_CCW);
-	glClearColor( 0.4f, 0.2f, 0.3f, 1.0f );
 
 	setupMainProg("shaders/vert.vert", "shaders/frag.frag");
-	setupShadowProg("shaders/passShadow.vert","shaders/passShadow.frag");
+	setupShadowProg("shaders/passShadow.vert", "shaders/passShadow.frag");
 	//setupQuadProg("shaders/pass.vert", "shaders/pass.frag");
 	setupColorProg("shaders/pass.vert", "shaders/pass.frag");
 	setupVoxelProg("shaders/voxel.vert", "shaders/voxel.frag", "shaders/voxel.geo");
 }
 
 Graphics::~Graphics(){
-	glDeleteProgram(shadowProgram);
-
-	/*glDeleteProgram(quadProgram);
-	glDeleteBuffers(1, &quadBuffer);
-	glDeleteVertexArrays(1, &quadVAO);*/
-
-	glDeleteProgram(colorProg);
-
-	glDeleteProgram(mainProg);
-
 	glfwDestroyWindow(window);
-    glfwTerminate();
+	glfwTerminate();
 }
 
 void Graphics::setupMainProg(string v, string f){
-	mainProg.gen(v,f);
+	mainProg.gen(v, f);
 
-	proj = glm::perspective( 50.0f, 800.0f / 600.0f, 0.01f, 50.0f );
+	proj = glm::perspective(50.0f, 800.0f / 600.0f, 0.01f, 50.0f);
 	glUseProgram(mainProg);
 
 	glUniform1f(glGetUniformLocation(mainProg, "ambientIntensity"), Settings::AmbientIntensity);
-	
+
 	if(Settings::Wireframe){
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
@@ -73,7 +63,7 @@ void Graphics::setupMainProg(string v, string f){
 	else{
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
-	
+
 	glUniform1i(glGetUniformLocation(mainProg, "ambTex"), 0);
 	glUniform1i(glGetUniformLocation(mainProg, "difTex"), 1);
 	//glUniform1i(glGetUniformLocation(mainProg, "specTex"), 2);
@@ -87,31 +77,31 @@ void Graphics::setupMainProg(string v, string f){
 
 void Graphics::setupShadowProg(string v, string f){	shadowProgram.gen(v, f);
 
-	framebuffer.gen();
+	shadowFramebuffer.gen();
 
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer);
 	shadowTexture.gen();
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTexture);
 	for(int i = 0; i < 6; i++){
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i	, 0,GL_DEPTH_COMPONENT16, 800, 800, 0,GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT16, 800, 800, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 		switch(i){
 		case 1://NEGATIVE X
-			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(-1,0,0),glm::vec3(0,-1,0));
+			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0));
 			break;
 		case 3://NEGATIVE Y
-			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(0,-1,0),glm::vec3(0,0,-1));
+			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(0, -1, 0), glm::vec3(0, 0, -1));
 			break;
 		case 5://NEGATIVE Z
-			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(0,0,-1),glm::vec3(0,-1,0));
+			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(0, 0, -1), glm::vec3(0, -1, 0));
 			break;
 		case 0://POSITIVE X
-			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(1,0,0),glm::vec3(0,-1,0));
+			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0));
 			break;
 		case 2://POSITIVE Y
-			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(0,1,0),glm::vec3(0,0,1));
+			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
 			break;
 		case 4://POSITIVE Z
-			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(0,0,1),glm::vec3(0,-1,0));
+			sideViews[i] = glm::lookAt(glm::vec3(0), glm::vec3(0, 0, 1), glm::vec3(0, -1, 0));
 			break;
 		}
 	}
@@ -142,16 +132,14 @@ void Graphics::setupColorProg(string v, string f){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-	glFramebufferTexture2D(
-		GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0
-		);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorTexture, 0);
 
 	colorDepthBuffer.gen();
 	glBindRenderbuffer(GL_RENDERBUFFER, colorDepthBuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 600);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, colorDepthBuffer);
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-	std::cout << "Frame buffer dun goofed " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
+		std::cout << "Frame buffer dun goofed " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
 
 	glUniform1f(glGetUniformLocation(colorProg, "passTexture"), 0);
 	static const GLfloat quad[] = {
@@ -173,73 +161,234 @@ void Graphics::setupColorProg(string v, string f){
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
-	
+
 }
 
 void Graphics::setupVoxelProg(string v, string f, string g){
+	voxelRenderProg.gen("shaders/voxelRender.vert", "shaders/voxelRender.frag", "shaders/voxelRender.geo");
 	voxelProg.gen(v, f, g);
 
 	voxelTexture.gen();
 	glBindTexture(GL_TEXTURE_3D, voxelTexture);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, VoxelSize, VoxelSize, VoxelSize, 0, GL_RED, GL_UNSIGNED_BYTE, voxelData);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	voxelFramebuffer.gen();
+	unsigned char * clearData = new unsigned char[VoxelSize* VoxelSize* VoxelSize];
+	memset(clearData, 5, VoxelSize* VoxelSize* VoxelSize);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, VoxelSize, VoxelSize, VoxelSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, clearData);
+	delete[] clearData;
+	clearData = 0;
+	/*voxelFramebuffer.gen();
 	glBindFramebuffer(GL_FRAMEBUFFER, voxelFramebuffer);
-}
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, voxelTexture, 0);	GLuint buffer = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if(buffer != GL_FRAMEBUFFER_COMPLETE){
+	std::cout <<"Buffer status: "<< buffer << std::endl;
+	}*/
+	/*static const GLfloat quadz[] = {
+	-1.0f, 1.0f, 0.0f,
+	-1.0f, -1.0f, 0.0f,
+	1.0f, -1.0f, 0.0f,
 
-/*void Graphics::setupQuadProg(string v, string f){
-	quadProgram = genShaders(v,f);	glUseProgram(quadProgram);	glUniform1f(glGetUniformLocation(quadProgram, "passTexture"), 0);
-	static const GLfloat quad[] = {
-		-1.0f, -1.0f, 0.0f,
-		1.0f, -1.0f, 0.0f,
-		-1.0f,  1.0f, 0.0f,
-		-1.0f,  1.0f, 0.0f,
-		1.0f, -1.0f, 0.0f,
-		1.0f,  1.0f, 0.0f,
+	-1.0f, 1.0f, 0.0f,
+	1.0f, -1.0f, 0.0f,
+	1.0f, 1.0f, 0.0f,
 	};
 
-	glGenVertexArrays(1, &quadVAO);
-	glBindVertexArray(quadVAO);
+	voxelRenderVAO.gen();
+	glBindVertexArray(voxelRenderVAO);
 
-	glGenBuffers(1, &quadBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, quadBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+	voxelRenderBuffer.gen();
+	std::cout << voxelRenderBuffer;
+	glBindBuffer(GL_ARRAY_BUFFER, voxelRenderBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadz), quadz, GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
-}*/
+	glProgramUniform1f(voxelRenderProg, glGetUniformLocation(voxelRenderProg, "dataTex"), 0);*/
+	//auto ortho = glm::ortho<float>(-1920.95f, 1799.91f, -126.442, 1429.43, -1182.81f, 1105.43f);
+
+	//auto ortho = glm::ortho<float>(-8.5215, 13.077, 0, 20.9551, -6.51986, 7.07799);
+	//auto ortho = glm::ortho<float>(-10, 15, -5, 25, -10, 10);
+	/*auto ortho = glm::mat4{1 / (13.077 + 8.5215), 0, 0, 0,
+		0, 1 / (20.9511), 0, 0,
+		0, 0, 1 / (7.07799 + 6.51986), 0,
+		8.5125 / (13.077 + 8.5215), 0, 6.51986 / (7.07799 + 6.51986), 1};*/
+	//	glm::scale(glm::mat4(), glm::vec3(1 / (13.077 + 8.5215), 1 / 20.9511, 1 / (7.07799 + 6.51986)));
+	//ortho = glm::translate(ortho, glm::vec3(8.5215, 0, 6.51986));
+
+
+	glProgramUniform1i(voxelProg, glGetUniformLocation(voxelProg, "voxelSize"), VoxelSize);
+}
+
+
+
+void Graphics::genVoxel(){
+	static bool done = false;
+	if(!done){
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, VoxelSize, VoxelSize);
+		glUseProgram(voxelProg);
+		glBindImageTexture(0, voxelTexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R8UI);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+		//TODO: change this to use all models but single pass
+		for(const auto & i : models){
+			auto & min = i->getMesh()->minBounds;
+			auto & max = i->getMesh()->maxBounds;
+			auto & maxed = max - min;
+
+			glm::mat4 move = glm::translate(glm::mat4(1.0), -min - std::max(maxed.x, std::max(maxed.y, maxed.z)) / 2.f);
+			//use a bias so that things that are very close to the -1 or 1 are not exactly that
+			//might not be needed for conservative rasterization
+			const float bias = 0.001;
+			glm::mat4 scale = glm::scale(glm::mat4(1.0), glm::vec3((2.f - bias) / std::max(maxed.x, std::max(maxed.y, maxed.z))));
+			voxelLooks[0] = glm::mat4(0.f, 0.f, 1.f, 0.f,
+									  0.f, 1.f, 0.f, 0.f,
+									  1.f, 0.f, 0.f, 0.f, 
+									  0, 0, 0, 1) *scale* move;
+			voxelLooks[1] = glm::mat4(1.f, 0.f, 0.f, 0.f, 
+									  0.f, 0.f, 1.f, 0.f, 
+									  0.f, 1.f, 0.f, 0.f,
+									  0, 0, 0, 1) * scale* move;
+			voxelLooks[2] = scale* move;
+			/*std::cout << glm::to_string((min)) << std::endl
+				<< glm::to_string(max) << std::endl
+				<< glm::to_string(maxed) << std::endl;*/
+			glProgramUniformMatrix4fv(voxelProg, glGetUniformLocation(voxelProg, "lookX"), 1, GL_FALSE, glm::value_ptr(voxelLooks[0]));
+			glProgramUniformMatrix4fv(voxelProg, glGetUniformLocation(voxelProg, "lookY"), 1, GL_FALSE, glm::value_ptr(voxelLooks[1]));
+			glProgramUniformMatrix4fv(voxelProg, glGetUniformLocation(voxelProg, "lookZ"), 1, GL_FALSE, glm::value_ptr(voxelLooks[2]));
+
+			//glm::mat4 matrix = glm::lookAt(glm::vec3{0, 0, 1}, glm::vec3{0, 0, 0}, glm::vec3{0, 1, 0})* glm::scale(glm::mat4(), glm::vec3(1799.91f + 1920.95f / 2, 1429.43 + 126.442 / 2, 1105.43f + 1182.81f / 2));
+			glBindVertexArray(i->getMesh()->vao);
+			glDrawElements(GL_TRIANGLES, i->getMesh()->nbVertices, GL_UNSIGNED_INT, 0);
+		}
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		done = true;
+
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+		unsigned char * data= new unsigned char[VoxelSize * VoxelSize * VoxelSize];
+
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glGetTexImage(GL_TEXTURE_3D, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
+
+		voxelCount = 0;
+		for(int z = 0; z < VoxelSize; z++){
+			for(int y = 0; y < VoxelSize; y++){
+				for(int x = 0; x < VoxelSize; x++){
+					if(data[x + y * VoxelSize + z*VoxelSize*VoxelSize] == 30){
+						voxelCount++;
+					}
+				}
+			}
+		}
+		std::cout << "Voxels: " << voxelCount << std::endl;
+		auto voxelArr = new glm::vec3[voxelCount];
+		int vox = 0;
+		bool first = true;
+		for(int z = 0; z < VoxelSize; z++){
+			for(int y = 0; y < VoxelSize; y++){
+				for(int x = 0; x < VoxelSize; x++){
+					if(data[x + y * VoxelSize + z*VoxelSize*VoxelSize] == 30){
+						//voxelArr[vox] = {x, y*(1429.43 + 126.442) / (1799.91f + 1920.95f), z* (1105.43f + 1182.81f) / (1799.91f + 1920.95f)};
+						voxelArr[vox] = {x, y, z};
+						if(first)
+						std::cout << x<< " " << y<< " "<<z<< std::endl;
+						first = false;
+						voxelArr[vox] += 0.5;
+						vox++;
+					}
+					else if(data[x + y * VoxelSize + z*VoxelSize*VoxelSize] != 5){
+						std::cout << x << " " << y << " " << z << " " << (int)data[x + y * VoxelSize + z*VoxelSize*VoxelSize];
+						throw std::exception("Bad write to texture ");
+					}
+				}
+			}
+		}
+		if(voxelCount)
+			std::cout << glm::to_string(voxelArr[0]) << std::endl;
+		assert(vox == voxelCount);
+		voxelRenderVAO.gen();
+		glBindVertexArray(voxelRenderVAO);
+
+		voxelRenderBuffer.gen();
+		glBindBuffer(GL_ARRAY_BUFFER, voxelRenderBuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*voxelCount, voxelArr, GL_STATIC_DRAW);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+		delete[] data;
+		delete[] voxelArr;
+	}
+}
+
+void Graphics::renderVoxel(){
+	glViewport(0, 0, 800, 600);
+	glUseProgram(voxelRenderProg);
+
+	//TODO: change this to use all models
+	const auto &i = models.front();
+	//ortho = generateOrthoVoxel(i->getMesh()->minBounds, i->getMesh()->maxBounds);
+	auto maxed = i->getMesh()->maxBounds - i->getMesh()->minBounds;
+	//ortho = glm::scale(i->getModelMatrix(), glm::vec3(1.f/VoxelSize));
+	float maxAxis = std::max(maxed.x, std::max(maxed.y, maxed.z));
+	//std::cout << glm::to_string(maxed) << std::endl;
+	auto ortho = glm::translate(i->getModelMatrix(), i->getMesh()->minBounds);
+
+	ortho = glm::scale(ortho, glm::vec3(maxAxis));
+
+	ortho = glm::scale(ortho, glm::vec3(1.f/ (float)VoxelSize));
+	//ortho = i->getModelMatrix() * ortho;
+
+	//ortho = glm::translate(ortho, i->getMesh()->minBounds);
+	//ortho = glm::scale(ortho, glm::vec3(2.f/VoxelSize));
+
+	//std::cout << glm::to_string(ortho*glm::vec4(0, 0, 0, 1));
+	//ortho = glm::scale(glm::mat4(), glm::vec3(2.f / VoxelSize));
+	glProgramUniformMatrix4fv(voxelRenderProg, glGetUniformLocation(voxelRenderProg, "VP"), 1, GL_FALSE, glm::value_ptr(proj*player->getCameraMatrix()*ortho));
+
+	glBindVertexArray(voxelRenderVAO);
+
+	glDrawArrays(GL_POINTS, 0, voxelCount);
+}
 
 void Graphics::setLight(){
-	glViewport(0,0,800,800);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glViewport(0, 0, 800, 800);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer);
 	glUseProgram(shadowProgram);
 	glEnable(GL_DEPTH_TEST);
 	GLint depthMVPpos = glGetUniformLocation(shadowProgram, "depthMVP");
 	//don't forget to change the function in the program!!!!!!
 	//in the fragment shader bro
 	//don't go lower than 0.1 near, or else you ahve to finick with the bias 
-	glm::mat4 depthProjectionMatrix = glm::perspective(90.f, 1.f, 0.1f, 50.f);
+	glm::mat4 depthProjectionMatrix = glm::perspective(90.f, 1.f, 0.1f, 100.f);
 	for(int loop = 0; loop < 6; ++loop){
-		glm::mat4 moveMatrix =glm::translate(sideViews[loop], -player->getSavedPos());
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+loop, shadowTexture,0);
-		glClear( GL_DEPTH_BUFFER_BIT);
-		for(const auto & i: models){
+		glm::mat4 moveMatrix = glm::translate(sideViews[loop], -player->getSavedPos());
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + loop, shadowTexture, 0);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		for(const auto & i : models){
 			glm::mat4 depthMVP = depthProjectionMatrix*moveMatrix*i->getModelMatrix();
-			glUniformMatrix4fv(depthMVPpos,1, GL_FALSE, glm::value_ptr(depthMVP));
+			glUniformMatrix4fv(depthMVPpos, 1, GL_FALSE, glm::value_ptr(depthMVP));
 			glBindVertexArray(i->getMesh()->vao);
-			glDrawElements(GL_TRIANGLES, i->getMesh()->nbVertices, GL_UNSIGNED_INT,0);
+			glDrawElements(GL_TRIANGLES, i->getMesh()->nbVertices, GL_UNSIGNED_INT, 0);
 		}
 	}
 }
 
 void Graphics::update(){
-	glUseProgram(mainProg);
+	genVoxel();
+
 	glBindFramebuffer(GL_FRAMEBUFFER, texFramebuffer);
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
-	glViewport(0,0,800,600);
+	glUseProgram(mainProg);
+	glViewport(0, 0, 800, 600);
 
 	GLint MVPloc = glGetUniformLocation(mainProg, "MVP");
 	GLint viewPos = glGetUniformLocation(mainProg, "V");
@@ -307,21 +456,20 @@ void Graphics::update(){
 				glBindTexture(GL_TEXTURE_2D, blueTex);
 
 			//std::cout<< mats->second << " ";
-			if(mats+1 != mesh->matCalls.end()){
+			if(mats + 1 != mesh->matCalls.end()){
 				glDrawElements(GL_TRIANGLES, (mats+1)->second - mats->second, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) *mats->second));
 				//	std::cout<<(mats+1)->second - mats->second<< " ";
 			}
 			else{
 				glDrawElements(GL_TRIANGLES, mesh->nbVertices -mats->second, GL_UNSIGNED_INT,(void*)(sizeof(unsigned int) *mats->second));
-				//	std::cout<<i->getMesh()->getNbIndices()<<std::endl<<std::endl;
 			}
 		}
 	}
 
+	renderVoxel();
 	glUseProgram(colorProg);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_DEPTH_TEST);
-	//glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(texVAO);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, asciiTexture);
@@ -335,10 +483,10 @@ void Graphics::update(){
 }
 void Graphics::addStaticModel(string name){
 	const ObjFile * file = gl::loadFile(name);
-	for(const auto & i:file->getMeshes()){
+	for(const auto & i : file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
-		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
-		models.back().get()->setScale(0.01f,0.01,0.01);
+		models.push_back(std::make_unique<Model>(i.second.get()));
+		models.back().get()->setScale(0.01f, 0.01,0.01);
 		//std::cout<<i.first<<std::endl;
 	}
 }
@@ -346,17 +494,17 @@ void Graphics::addStaticModel(string name){
 vector<PxRigidDynamic *> Graphics::addBus(string name, Physics & physics){
 	const ObjFile * file = gl::loadFile(name);
 	unordered_map<string, Model*> newmods;
-	for(const auto & i:file->getMeshes()){
+	for(const auto & i : file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
 		//newmods.emplace(i.first, mod);
-		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
+		models.push_back(std::make_unique<Model>(i.second.get()));
 		newmods.emplace(i.first, models.back().get());
 		//std::cout<<i.first<<std::endl;
 	}
 	//Model * mod =  new Model(loadMesh(name));
 	//models.emplace_back(mods);
 
-	name= name.substr(0, name.find_last_of('.')) + ".xml";
+	name = name.substr(0, name.find_last_of('.')) + ".xml";
 
 	PxCollection* bufferCollection = physics.getPhysics()->createCollection();
 	PxCollection* sceneCollection = physics.getPhysics()->createCollection();
@@ -395,17 +543,17 @@ vector<PxRigidDynamic *> Graphics::addBus(string name, Physics & physics){
 void Graphics::addDynamicModel(string name, Physics & physics){
 	const ObjFile * file = gl::loadFile(name);
 	unordered_map<string, Model*> newmods;
-	for(const auto & i:file->getMeshes()){
+	for(const auto & i : file->getMeshes()){
 		//Model * mod = new Model(i.second.get());
 		//newmods.emplace(i.first, mod);
-		models.push_back(unique_ptr<Model>(new Model(i.second.get())));
+		models.push_back(std::make_unique<Model>(i.second.get()));
 		newmods.emplace(i.first, models.back().get());
 		//std::cout<<i.first<<std::endl;
 	}
 	//Model * mod =  new Model(loadMesh(name));
 	//models.emplace_back(mods);
 
-	name= name.substr(0, name.find_last_of('.')) + ".xml";
+	name = name.substr(0, name.find_last_of('.')) + ".xml";
 
 	PxCollection* bufferCollection = physics.getPhysics()->createCollection();
 	PxCollection* sceneCollection = physics.getPhysics()->createCollection();

@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Mesh.h"
 
-Mesh::Mesh(const ObjFile * f, GLuint a, GLuint e, int siz,vector<std::pair<string, int> > && m)
-	:file(f),vao(a), ebo(e), nbVertices(siz),matCalls(std::move(m)){
+Mesh::Mesh(const ObjFile * f, GLuint a, GLuint e, int siz,vector<std::pair<string, int> > && m, glm::vec3 mi, glm::vec3 ma)
+	:file(f),vao(a), ebo(e), nbVertices(siz),matCalls(std::move(m)), minBounds(mi), maxBounds(ma){
 }
 
 Mesh::~Mesh(){
